@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="container">
+    <h1 class="my-4">Nginx Logs</h1>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Website</th>
+          <th>Visit Time</th>
+          <th>Client IP</th>
+          <th>User-Agent</th>
+          <th>Path</th>
+          <th>Method</th>
+          <th>Status Code</th>
+          <th>Data Transfer</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for visit in visits %}
+        <tr>
+          <td>{{ visit.site.site_name }}</td>
+          <td>{{ visit.visit_time }}</td>
+          <td>{{ visit.remote_addr }}</td>
+          <td>{{ visit.user_agent }}</td>
+          <td>{{ visit.path }}</td>
+          <td>{{ visit.method }}</td>
+          <td>{{ visit.status_code }}</td>
+          <td>{{ visit.data_transfer }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
