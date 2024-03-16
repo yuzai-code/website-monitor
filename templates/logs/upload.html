@@ -53,7 +53,8 @@
                 beforeSend: function (xhr, settings) {
                     xhr.setRequestHeader("X-CSRFToken", $('input[name="csrfmiddlewaretoken"]').val());
                 },
-                success: function () {
+                success: function (data) {
+                    $('.modal-body').text(data.message);
                     $('#uploadSuccessModal').modal('show');
                 }
             });

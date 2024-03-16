@@ -1,13 +1,10 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Website Stats</title>
-</head>
-<body>
+{% extends 'base.html' %}
+
+{#{% block title %}Website Stats{% endblock %}#}
+{% block content %}
     <form method="get" action="/website_stats/">
         <label for="website">Website:</label><br>
         <input type="text" id="website" name="website"><br>
         <input type="submit" value="Submit">
     </form>
-</body>
-</html>
+{% endblock %}

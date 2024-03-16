@@ -18,7 +18,7 @@ class LogFileModel(BaseModel):
         verbose_name_plural = verbose_name
 
     def get_absolute_url(self):
-        return reverse('log_file_detail', args=[str(self.id)])
+        return reverse('index')
 
 
 class WebsiteModel(BaseModel):
@@ -57,7 +57,7 @@ class VisitModel(BaseModel):
     visit_time = models.DateTimeField(auto_now_add=True, verbose_name='访问时间')
     remote_addr = models.GenericIPAddressField(verbose_name='客户端IP', blank=True, null=True)
     user_agent = models.CharField(max_length=255, verbose_name='User-Agent')
-    path = models.CharField(max_length=255, verbose_name='访问路径')
+    path = models.CharField(max_length=1000, verbose_name='访问路径', blank=True, null=True)
     method = models.CharField(max_length=100, verbose_name='请求方法')
     status_code = models.IntegerField(verbose_name='HTTP状态码')
     data_transfer = models.BigIntegerField(verbose_name='数据传输总量')
@@ -81,7 +81,7 @@ class TodayTotalModel(BaseModel):
     """
     website = models.ForeignKey(WebsiteModel, on_delete=models.CASCADE, verbose_name='站点')
     ip_today = models.IntegerField(verbose_name='当天访问IP数', blank=True, null=True)
-    traffic_time = models.DateField(verbose_name='流量日期', unique=True)
+    traffic_time = models.DateField(verbose_name='流量日期')
     traffic_today = models.BigIntegerField(verbose_name='当天传输数据量', blank=True, null=True)
     visit_today = models.IntegerField(verbose_name='当天访问量', default=0)
     visitor_today = models.IntegerField(verbose_name='当天访客量', default=0)
