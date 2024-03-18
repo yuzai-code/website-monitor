@@ -54,9 +54,9 @@ class VisitModel(BaseModel):
     访问信息
     """
     site = models.ForeignKey(WebsiteModel, on_delete=models.CASCADE, verbose_name='站点')
-    visit_time = models.DateTimeField(auto_now_add=True, verbose_name='访问时间')
-    remote_addr = models.GenericIPAddressField(verbose_name='客户端IP', blank=True, null=True)
-    user_agent = models.CharField(max_length=255, verbose_name='User-Agent')
+    visit_time = models.DateTimeField(verbose_name='访问时间', db_index=True)
+    remote_addr = models.GenericIPAddressField(verbose_name='客户端IP', blank=True, null=True, db_index=True)
+    user_agent = models.CharField(max_length=255, verbose_name='User-Agent', blank=True, null=True, db_index=True)
     path = models.CharField(max_length=1000, verbose_name='访问路径', blank=True, null=True)
     method = models.CharField(max_length=100, verbose_name='请求方法')
     status_code = models.IntegerField(verbose_name='HTTP状态码')

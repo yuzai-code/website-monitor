@@ -141,13 +141,14 @@ class LogUpload(CreateView):
                 time_data = visit_time.strip('[]')
                 # 转换成YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ]日期格式
                 visit_time = datetime.strptime(time_data, '%d/%b/%Y:%H:%M:%S %z')
-
+                # print(f'visit_time: {visit_time}')
                 VisitModel.objects.get_or_create(
                     site=website,
                     visit_time=visit_time,
                     remote_addr=log.get('remote_addr'),
+                    user_agent=log.get('http_user_agent', ''),
                     defaults={
-                        'user_agent': log.get('http_user_agent', ''),
+                        # 'user_agent': log.get('http_user_agent', ''),
                         'path': log.get('request').split()[1],
                         'method': log.get('request').split()[0],
                         'status_code': log.get('status'),

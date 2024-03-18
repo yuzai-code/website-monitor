@@ -52,13 +52,13 @@ def update_total(sender, instance, created, **kwargs):
                 f'更新今日总数: {today_total, visitor_count, ip_count} ')
 
             # WebsiteModel中的总数
-            website = WebsiteModel.objects.filter(id=instance.site.id).update(
-                visit_total=F('visit_total') + 1,
-                visitor_total=F('visitor_total') + visitor_count,
-                data_transfer_total=F('data_transfer_total') + instance.data_transfer,
-                ip_total=F('ip_total') + ip_count
-            )
-            logger.info(f'更新总数: {website}')
+            # website = WebsiteModel.objects.filter(id=instance.site.id).update(
+            #     visit_total=F('visit_total') + 1,
+            #     visitor_total=F('visitor_total') + visitor_count,
+            #     data_transfer_total=F('data_transfer_total') + instance.data_transfer,
+            #     ip_total=F('ip_total') + ip_count
+            # )
+            # logger.info(f'更新总数: {website}')
             # print(f'更新总数: {total}')
     else:
         # 如果是更新的访问记录，更新总流量
