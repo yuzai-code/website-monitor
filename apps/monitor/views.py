@@ -5,13 +5,17 @@ import tempfile
 from datetime import datetime
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import models
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views.generic import CreateView, DetailView, ListView
 from pygrok import pygrok
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .forms import LogFileForm
 from .models import VisitModel, WebsiteModel, LogFileModel
+from .serializer.monitor_serializer import MonitorSerializer
 
 pattern_string = r'(?P<remote_addr>\d+\.\d+\.\d+\.\d+) - - \[(?P<time_local>.+?)\] "(?P<method>\S+) (?P<path>\S+) (?P<protocol>HTTP\/\d\.\d)" (?P<status>\d{3}) (?P<body_bytes_sent>\d+) "(?P<http_referer>[^"]*)" "(?P<user_agent>[^"]+)"'
 
@@ -40,20 +44,20 @@ class LogUpload(CreateView):
 
     def post(self, request, *args, **kwargs):
         # print('111')
-        form = self.form_class(request.POST, request.FILES, request)
-        if form.is_valid():
+        try:
             file = self.request.FILES['upload_file']
-            domain = form.cleaned_data['website']
+            domain = self.request.POST.get('website', None)
             nginx_format = self.request.POST.get('nginx_log_format')
             # print(f'file: {file}')
             file_name = file.name
-            self.object = form.save()
+            if domain.strip() == '':
+                self.handle_uploaded_file(file, file_name, domain, nginx_format)
+                return JsonResponse({'message': '文件上传成功'}, status=200)
             self.handle_uploaded_file(file, file_name, domain, nginx_format)
             return JsonResponse({'message': '文件上传成功'}, status=200)
-        else:
-            # print(form.errors)
+        except Exception as e:
             # 表单验证  失败的情况
-            return JsonResponse({'errors': form.errors}, status=400)
+            return JsonResponse({'errors': e}, status=400)
 
     def generate_nginx_regex(self, nginx_format):
         try:
@@ -102,9 +106,15 @@ class LogUpload(CreateView):
             self.process_log_file(file, domain, nginx_format)
 
     def process_log_file(self, file, domain, nginx_format):
-        # print(f'Processing log file,{file}')
         # 处理日志文件
-        # batch_size = 1000  # 每批处理1000行日志
+        if domain.strip() == '':  # 如果domain为空，就从文件中的request获取
+            for line in file:
+                if line.strip():
+                    if isinstance(line, bytes):
+                        line = line.decode('utf-8')
+                    self.parse_nginx_log(line, website=None, nginx_format=nginx_format)
+            return None
+
         # 获取站点信息，如果站点不存在则创建
         website, _ = WebsiteModel.objects.get_or_create(domain=domain)
         for line in file:
@@ -115,10 +125,7 @@ class LogUpload(CreateView):
                 self.parse_nginx_log(line, website, nginx_format)
 
     def parse_nginx_log(self, line, website, nginx_format):
-        # 解析nginx日志
-        # if not isinstance(line, str):
-        #     logging.error(f"Failed to parse log line: {line} is not a string")
-        #     return None
+
         try:
             # 使用pygrok解析日志
             pattern_string = self.generate_nginx_regex(nginx_format)
@@ -141,25 +148,47 @@ class LogUpload(CreateView):
                 time_data = visit_time.strip('[]')
                 # 转换成YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ]日期格式
                 visit_time = datetime.strptime(time_data, '%d/%b/%Y:%H:%M:%S %z')
-                # print(f'visit_time: {visit_time}')
-                VisitModel.objects.get_or_create(
-                    site=website,
-                    visit_time=visit_time,
-                    remote_addr=log.get('remote_addr'),
-                    user_agent=log.get('http_user_agent', ''),
-                    defaults={
-                        # 'user_agent': log.get('http_user_agent', ''),
-                        'path': log.get('request').split()[1],
-                        'method': log.get('request').split()[0],
-                        'status_code': log.get('status'),
-                        'data_transfer': log.get('body_bytes_sent'),
-                        'http_referer': log.get('http_referer'),
-                        'malicious_request': False,
-                        'http_x_forwarded_for': log.get('http_x_forwarded_for'),
-                        'request_time': log.get('request_time')
-                    }
-                )
-                logging.info(f'Parsed log line: {log}')
+                if website:
+                    # print(f'visit_time: {visit_time}')
+                    logging.info(f'Parsed log line: {log}')
+                    return VisitModel.objects.get_or_create(
+                        site=website,
+                        visit_time=visit_time,
+                        remote_addr=log.get('remote_addr'),
+                        user_agent=log.get('http_user_agent', ''),
+                        defaults={
+                            # 'user_agent': log.get('http_user_agent', ''),
+                            'path': log.get('request').split()[1],
+                            'method': log.get('request').split()[0],
+                            'status_code': log.get('status'),
+                            'data_transfer': log.get('body_bytes_sent'),
+                            'http_referer': log.get('http_referer'),
+                            'malicious_request': False,
+                            'http_x_forwarded_for': log.get('http_x_forwarded_for'),
+                            'request_time': log.get('request_time')
+                        }
+                    )
+                else:
+                    domain = log.get('request').split('/')[2]
+                    website, _ = WebsiteModel.objects.get_or_create(domain=domain)
+                    logging.info(f'Parsed log line: {log}')
+                    return VisitModel.objects.get_or_create(
+                        site=website,
+                        visit_time=visit_time,
+                        remote_addr=log.get('remote_addr'),
+                        user_agent=log.get('http_user_agent', ''),
+                        defaults={
+                            # 'user_agent': log.get('http_user_agent', ''),
+                            'path': log.get('request').split()[1],
+                            'method': log.get('request').split()[0],
+                            'status_code': log.get('status'),
+                            'data_transfer': log.get('body_bytes_sent'),
+                            'http_referer': log.get('http_referer'),
+                            'malicious_request': False,
+                            'http_x_forwarded_for': log.get('http_x_forwarded_for'),
+                            'request_time': log.get('request_time')
+                        }
+                    )
         except Exception as e:
             logging.error(f'Failed to parse log line: {e}')
             return None
@@ -181,3 +210,50 @@ def website_stats(request):
             return JsonResponse({'message': '站点不存在'}, status=400)
     else:
         return render(request, 'website_stats.html')
+
+
+class WebsiteListView(ListView):
+    """
+    获取站点列表
+    """
+    model = WebsiteModel
+    template_name = 'website_list.html'
+    context_object_name = 'websites'
+
+    # 处理get请求，确保即使是get请求也能正常显示页面
+    def get_queryset(self):
+        return WebsiteModel.objects.all()  # 不加载任何结构，直到进行搜索
+
+    def post(self, request, *args, **kwargs):
+        domain = request.POST.get('domain', '')
+        domain_text = request.POST.get('domain_text', '').strip()
+        start_date = request.POST.get('start_date', '')
+        end_date = request.POST.get('end_date', '')
+
+        queryset = WebsiteModel.objects.all()
+
+        # 如果domain_text有值，优先使用；否则，使用下拉菜单的选择
+        if domain_text:
+            queryset = queryset.filter(domain__icontains=domain_text)
+        elif domain:
+            queryset = queryset.filter(domain=domain)
+
+        # 日期过滤逻辑保持不变
+        if start_date:
+            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+            queryset = queryset.filter(visitmodel__visit_time__date__gte=start_date)
+        if end_date:
+            end_date = datetime.strptime(end_date, "%Y-%m-%d")
+            queryset = queryset.filter(visitmodel__visit_time__date__lte=end_date)
+
+        # 在调用get_context_data之前设置object_list
+        self.object_list = queryset.distinct()
+
+        # 更新上下文以包括查询结果和原始表单数据
+        context = self.get_context_data()
+        context['form_data'] = request.POST
+        return render(request, self.template_name, context)
+
+
+class WebsiteDetailView(DetailView):
+    """"""

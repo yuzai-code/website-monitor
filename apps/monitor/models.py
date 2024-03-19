@@ -7,7 +7,7 @@ from utils.basemodel import BaseModel
 # Create your models here.
 
 class LogFileModel(BaseModel):
-    website = models.ForeignKey('WebsiteModel', on_delete=models.CASCADE, verbose_name='站点')
+    website = models.ForeignKey('WebsiteModel', on_delete=models.CASCADE, verbose_name='站点', blank=True, null=True)
     upload_file = models.FileField(upload_to='log', verbose_name='上传文件')
     upload_time = models.DateTimeField(auto_now_add=True, verbose_name='上传时间')
     nginx_log_format = models.CharField(max_length=255, verbose_name='Nginx日志格式', blank=True, null=True)
@@ -38,7 +38,10 @@ class WebsiteModel(BaseModel):
     visit_total = models.IntegerField(verbose_name='总访问量', default=0)
     data_transfer_total = models.BigIntegerField(verbose_name='总数据传输量', blank=True, null=True)
     visitor_total = models.IntegerField(verbose_name='总访客数', default=0)
-    date = models.DateField(auto_now_add=True, verbose_name='日期', blank=True, null=True)
+    error_total = models.IntegerField(verbose_name='错误数', default=0)
+    request_per_second = models.FloatField(verbose_name='每秒请求数', blank=True, null=True)
+
+    # date = models.DateField(auto_now_add=True, verbose_name='日期', blank=True, null=True)
 
     def __str__(self):
         return self.domain
@@ -79,7 +82,7 @@ class TodayTotalModel(BaseModel):
     """
     流量信息
     """
-    website = models.ForeignKey(WebsiteModel, on_delete=models.CASCADE, verbose_name='站点')
+    website = models.ForeignKey(WebsiteModel, on_delete=models.CASCADE, verbose_name='站点', default=1)
     ip_today = models.IntegerField(verbose_name='当天访问IP数', blank=True, null=True)
     traffic_time = models.DateField(verbose_name='流量日期')
     traffic_today = models.BigIntegerField(verbose_name='当天传输数据量', blank=True, null=True)

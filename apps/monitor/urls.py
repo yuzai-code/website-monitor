@@ -22,4 +22,6 @@ urlpatterns = [
     path('website_stats/', views.website_stats, name='website_stats'),
 
     path('upload/', views.LogUpload.as_view(), name='log_upload'),
+
+    path('website_list/', views.WebsiteListView.as_view(), name='website_list'),
 ]

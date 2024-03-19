@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     'celery',
     'redis',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -54,7 +55,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'WebsiteMonitor.urls'
-
 
 # 媒体文件
 MEDIA_URL = '/media/'

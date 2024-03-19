@@ -3,7 +3,7 @@ from .models import LogFileModel, WebsiteModel
 
 
 class LogFileForm(forms.ModelForm):
-    website = forms.CharField(widget=forms.TextInput(attrs={'placeholder': 'Enter website URL here'}))
+    website = forms.CharField(widget=forms.TextInput(attrs={'placeholder': 'Enter website URL here'}), required=False)
 
     class Meta:
         model = LogFileModel
