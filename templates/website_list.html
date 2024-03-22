@@ -22,7 +22,8 @@
     </form>
 
     {% for website in websites %}
-        <p>{{ website.domain }} -
-            访问次数：{{ website.visit_total }}，总ip数: {{ website.ip_total }}，访问人数：{{ website.visitor_total }}，流量总数：{{ website.data_transfer_total }}，错误数：{{ website.error_total }}，每秒请求次数：{{ website.request_per_second }}</p>
+        <p><a href="{% url 'website_detail' pk=website.id %}">{{ website.domain }}</a> -
+            访问次数：{{ website.visit_total }}，总ip数: {{ website.ip_total }}，访问人数：{{ website.visitor_total }}，流量总数：{{ website.data_transfer_total }}，错误数：{{ website.error_total }}，每秒请求次数：{{ website.request_per_second }}
+        </p>
     {% endfor %}
 {% endblock %}

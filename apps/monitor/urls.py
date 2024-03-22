@@ -24,4 +24,5 @@ urlpatterns = [
     path('upload/', views.LogUpload.as_view(), name='log_upload'),
 
     path('website_list/', views.WebsiteListView.as_view(), name='website_list'),
+    path('website_detail/<int:pk>/', views.WebsiteDetailView.as_view(), name='website_detail'),
 ]

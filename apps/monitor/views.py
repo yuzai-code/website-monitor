@@ -13,6 +13,7 @@ from pygrok import pygrok
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .es import Aggregation
 from .forms import LogFileForm
 from .models import VisitModel, WebsiteModel, LogFileModel
 from .serializer.monitor_serializer import MonitorSerializer
@@ -256,4 +257,27 @@ class WebsiteListView(ListView):
 
 
 class WebsiteDetailView(DetailView):
-    """"""
+    """
+    获取站点详情
+    """
+    model = WebsiteModel
+    template_name = 'website_detail.html'
+    context_object_name = 'website'
+
+    def get(self, request, *args, **kwargs):
+        website = self.get_object()
+        visits = website.visitmodel_set.all()
+        # 查询ip访问量最高的10个IP
+        ips = Aggregation(domain=website.domain, index='visit').get_ip_aggregation(size=10)
+        print(ips)
+        context = {'website': website, 'visits': visits, 'ips': ips}
+        return render(request, self.template_name, context)
+
+    # 根据ip地址查询访问信息
+    def post(self, request, *args, **kwargs):
+        ip = request.POST.get('ip', '')
+        website = self.get_object()
+        datas = Aggregation(domain=website.domain, index='visit').search_ip(ip, size=10)
+        print(f'datas: {datas}')
+        context = {'website': website, 'datas': datas}
+        return render(request, self.template_name, context)

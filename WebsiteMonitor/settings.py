@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'celery',
     'redis',
     'rest_framework',
+    'django_elasticsearch_dsl',
 ]
 
 MIDDLEWARE = [
@@ -105,9 +106,9 @@ DATABASES = {
 # es配置
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': '172.18.0.4:9200',  # todo 上线修改
+        'hosts': 'localhost:9200',  # todo 上线修改
         # 'hosts': 'elasticsearch',  # todo 上线修改
-        'http_auth': ('username', 'password')
+        # 'http_auth': ('username', 'password')
     }
 }
 

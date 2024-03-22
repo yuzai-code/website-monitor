@@ -129,31 +129,32 @@ def parse_nginx_log(log_line):
         return None
 
 
-@shared_task(name='detect_malicious_requests', queue='detect_malicious_requests')
-def detect_malicious_requests():
+@shared_task(name='check_malicious_requests', queue='check_malicious_requests')
+def check_malicious_requests():
     """
     检测恶意请求
     """
     # 获取一段时间内的请求数据
-    time_threshold = datetime.now() - timedelta(hours=1)
+    time_threshold = datetime.now() - timedelta(minutes=30)
     visits = VisitModel.objects.filter(visit_time__gte=time_threshold)
 
     # 检测频繁的请求
-    ip_counts = visits.values('remote_addr').annotate(count=Count('remote_addr')).order_by('-count')
-    for ip_count in ip_counts:
-        if ip_count['count'] > 100:  # 如果一个IP在一小时内的请求次数超过100次，我们认为它可能是恶意的
-            malicious_ips = VisitModel.objects.filter(remote_addr=ip_count['remote_addr'])
-            malicious_ips.update(malicious_request=True)
+    # ip_counts = visits.values('remote_addr').annotate(count=Count('remote_addr')).order_by('-count')
+    # for ip_count in ip_counts:
+    #     if ip_count['count'] > 100:  # 如果一个IP在一小时内的请求次数超过100次，我们认为它可能是恶意的
+    #         malicious_ips = VisitModel.objects.filter(remote_addr=ip_count['remote_addr'])
+    #         malicious_ips.update(malicious_request=True)
 
     # 检测非法的请求
-    # 这里只是一个示例，你可能需要根据你的具体需求来定义什么是非法的请求
     malicious_requests = visits.filter(status_code__gte=400)
     malicious_requests.update(malicious_request=True)
 
     # 检测可疑的用户代理
-    # 这里只是一个示例，你可能需要根据你的具体需求来定义什么是可疑的用户代理
     suspicious_user_agents = visits.filter(user_agent__contains='bot')
     suspicious_user_agents.update(malicious_request=True)
+
+
+# 检测恶意请求
 
 
 if __name__ == '__main__':

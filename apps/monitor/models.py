@@ -32,13 +32,14 @@ class WebsiteModel(BaseModel):
     site_name = models.CharField(max_length=100, verbose_name='站点名称', blank=True, null=True)
     site_type = models.CharField(max_length=100, verbose_name='站点类型', blank=True, null=True)
     domain = models.CharField(max_length=100, verbose_name='域名', blank=True, null=True, unique=True)
-    deploy_status = models.IntegerField(choices=DEPLOY_STATUS, default=0, verbose_name='部署状态')
+    deploy_status = models.IntegerField(choices=DEPLOY_STATUS, default=1, verbose_name='部署状态')
     nginx_log_format = models.CharField(max_length=255, verbose_name='Nginx日志格式', blank=True, null=True)
     ip_total = models.IntegerField(verbose_name='访问IP总数', default=0)
     visit_total = models.IntegerField(verbose_name='总访问量', default=0)
     data_transfer_total = models.BigIntegerField(verbose_name='总数据传输量', blank=True, null=True)
     visitor_total = models.IntegerField(verbose_name='总访客数', default=0)
     error_total = models.IntegerField(verbose_name='错误数', default=0)
+    malicious_request_total = models.IntegerField(verbose_name='恶意请求数', default=0)
     request_per_second = models.FloatField(verbose_name='每秒请求数', blank=True, null=True)
 
     # date = models.DateField(auto_now_add=True, verbose_name='日期', blank=True, null=True)
@@ -61,11 +62,11 @@ class VisitModel(BaseModel):
     remote_addr = models.GenericIPAddressField(verbose_name='客户端IP', blank=True, null=True, db_index=True)
     user_agent = models.CharField(max_length=255, verbose_name='User-Agent', blank=True, null=True, db_index=True)
     path = models.CharField(max_length=1000, verbose_name='访问路径', blank=True, null=True)
-    method = models.CharField(max_length=100, verbose_name='请求方法')
-    status_code = models.IntegerField(verbose_name='HTTP状态码')
+    method = models.CharField(max_length=100, verbose_name='请求方法', blank=True, null=True, db_index=True)
+    status_code = models.IntegerField(verbose_name='HTTP状态码', db_index=True)
     data_transfer = models.BigIntegerField(verbose_name='数据传输总量')
     http_referer = models.CharField(max_length=255, verbose_name='HTTP_REFERER', blank=True, null=True)
-    malicious_request = models.BooleanField(default=False, verbose_name='是否恶意请求')
+    malicious_request = models.BooleanField(default=False, verbose_name='是否恶意请求', db_index=True)
     http_x_forwarded_for = models.CharField(max_length=100, verbose_name='实际的客户端IP', blank=True, null=True)
     request_time = models.FloatField(verbose_name='请求时间', blank=True, null=True)
 
@@ -73,6 +74,7 @@ class VisitModel(BaseModel):
         db_table = 't_visit'
         verbose_name = '访问信息'
         verbose_name_plural = verbose_name
+        ordering = ['-visit_time']
 
     def __str__(self):
         return self.remote_addr
