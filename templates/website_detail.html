@@ -20,6 +20,7 @@
             <tr>
                 <td>{{ visit.visit_time }}</td>
                 <td>{{ visit.remote_addr }}</td>
+                <td>{{ visit.http_x_forwarded_for }}</td>
                 <td>{{ visit.user_agent }}</td>
                 <td>{{ visit.path }}</td>
                 <!-- 根据你的模型填充更多数据 -->
@@ -38,7 +39,7 @@
         </tbody>
     </table>
 
-    <h3>IP聚合信息</h3>
+    <h3>IP频率最高的前10个IP</h3>
     <form method="post">
         {% csrf_token %}
         {% for ip in ips %}
@@ -48,4 +49,11 @@
             </p>
         {% endfor %}
     </form>
+    <h3>当前24小时内访问ip频率前10</h3>
+    {% for ip in ips_10 %}
+        <p>
+            {{ ip.key }} - {{ ip.doc_count }}
+            <button type="submit" name="ip" value="{{ ip.key }}">查看此IP的访问详情</button>
+        </p>
+    {% endfor %}
 {% endblock %}

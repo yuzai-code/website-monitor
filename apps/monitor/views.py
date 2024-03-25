@@ -269,8 +269,10 @@ class WebsiteDetailView(DetailView):
         visits = website.visitmodel_set.all()
         # 查询ip访问量最高的10个IP
         ips = Aggregation(domain=website.domain, index='visit').get_ip_aggregation(size=10)
-        print(ips)
-        context = {'website': website, 'visits': visits, 'ips': ips}
+        # print(ips)
+        ips_10 = Aggregation(domain=website.domain, index='visit').get_10_ip_aggregation()
+        # print(ips_10)
+        context = {'website': website, 'visits': visits, 'ips': ips, 'ips_10': ips_10}
         return render(request, self.template_name, context)
 
     # 根据ip地址查询访问信息

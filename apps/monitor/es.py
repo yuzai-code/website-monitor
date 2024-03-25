@@ -21,6 +21,14 @@ class Aggregation:
         response = s.execute()
         return response.aggregations.ip.buckets
 
+    def get_10_ip_aggregation(self):
+        # 获取ip前10
+        s = Search(using=self.es, index=self.index)
+        s = s.filter('range', **{'@timestamp': {'gte': 'now-24h', 'lte': 'now'}})
+        s.aggs.bucket('ip', 'terms', field='http_x_forwarded_for', size=10)
+        response = s.execute()
+        return response.aggregations.ip.buckets
+
     def search_ip(self, ip, size=None):
         # 根据ip查询
         s = Search(using=self.es, index=self.index)
