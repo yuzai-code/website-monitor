@@ -16,8 +16,6 @@ const website = ref([])
 const selectedItem = ref(null)
 const filteredWebsites = ref([])
 
-
-
 onMounted(async () => {
   try {
     const response = await axios.get('http://127.0.0.1:8000/api/website_list')

@@ -17,11 +17,14 @@
       <span class="value">{{ websiteData.visit_total }}</span>
     </div>
   </div>
+  <div class="card-data" v-else>
+    <span>暂无数据</span>
+  </div>
 </template>
 
 <script setup lang="ts">
 defineProps({
-  websiteData: Object
+  websiteData: Array
 })
 </script>
 

@@ -25,14 +25,14 @@ const dates = ref()
 const selectedWebSite = ref(null)
 const websiteData = ref([])
 const websiteId = ref(null)
-const defaultWebsiteId = 1
+const defaultWebsiteId = 1905
 
 const setTodayAsDefaultDate = () => {
   const today = new Date()
   dates.value = [today, today]
 }
 
-const defaultWebsite = { id: defaultWebsiteId, domain: 'br.th-slot-rtp.xyz' }
+const defaultWebsite = { id: defaultWebsiteId, domain: 'us.rajabandot.top' }
 
 const setDefaultWebsiteId = () => {
   selectedWebSite.value = defaultWebsite // 设置默认网站对象，包含 id 和 domain
@@ -52,7 +52,7 @@ const submit = async () => {
   try {
     const response = await axios.post('http://127.0.0.1:8000/api/website_list/', data)
     console.log('Response:', response.data)
-    websiteData.value = response.data
+    websiteData.value = response.data[0]
   } catch (error) {
     console.error('Request failed:', error)
   }

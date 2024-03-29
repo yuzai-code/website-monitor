@@ -2,13 +2,16 @@ import logging
 import re
 import gzip
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
+from django.db.models import Count, Q, Avg, Sum
+from django.db.models.functions import TruncDay
 from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
+from django.utils.dateparse import parse_date
 from django.views.generic import CreateView, DetailView, ListView
 from pygrok import pygrok
 from rest_framework.response import Response
@@ -17,7 +20,7 @@ from rest_framework.views import APIView
 from .es import Aggregation
 from .forms import LogFileForm
 from .models import VisitModel, WebsiteModel, LogFileModel
-from .serializer.monitor_serializer import MonitorSerializer
+from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer
 
 pattern_string = r'(?P<remote_addr>\d+\.\d+\.\d+\.\d+) - - \[(?P<time_local>.+?)\] "(?P<method>\S+) (?P<path>\S+) (?P<protocol>HTTP\/\d\.\d)" (?P<status>\d{3}) (?P<body_bytes_sent>\d+) "(?P<http_referer>[^"]*)" "(?P<user_agent>[^"]+)"'
 
@@ -223,41 +226,50 @@ class WebsiteListAPIView(APIView):
     template_name = 'website_list.html'
     context_object_name = 'websites'
 
-    # 处理get请求，确保即使是get请求也能正常显示页面
+    def get_dates_range(self, dates):
+        """根据传入的日期列表计算查询范围"""
+        if not dates or len(dates) < 2:
+            return None
+
+        start_date = parse_date(dates[0].split('T')[0])
+        end_date = parse_date(dates[1].split('T')[0])
+
+        if start_date and end_date and start_date == end_date:
+            # 包括结束日期当天的整天
+            end_date += timedelta(days=1)
+
+        return start_date, end_date
+
+    def filter_queryset_by_dates(self, queryset, dates_range):
+        """根据日期范围过滤查询集"""
+        if dates_range:
+            start_date, end_date = dates_range
+            queryset = queryset.filter(visitmodel__visit_time__range=(start_date, end_date))
+        return queryset
+
     def get(self, request, format=None):
-        websites = WebsiteModel.objects.all()
-        serializer = MonitorSerializer(websites, many=True)
+        dates = request.GET.getlist('dates[]')
+        dates_range = self.get_dates_range(dates)
+        queryset = WebsiteModel.objects.all()
+        queryset = self.filter_queryset_by_dates(queryset, dates_range)
+        queryset = queryset.annotate(total_visits=Count('visitmodel'))
+
+        serializer = MonitorSerializer(queryset, many=True)
         return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
-        domain = request.POST.get('domain', '')
-        domain_text = request.POST.get('domain_text', '').strip()
-        start_date = request.POST.get('start_date', '')
-        end_date = request.POST.get('end_date', '')
-
+        website_id = request.data.get('id', '')
+        dates = request.data.get('dates', [])
+        dates_range = self.get_dates_range(dates)
         queryset = WebsiteModel.objects.all()
 
-        # 如果domain_text有值，优先使用；否则，使用下拉菜单的选择
-        if domain_text:
-            queryset = queryset.filter(domain__icontains=domain_text)
-        elif domain:
-            queryset = queryset.filter(domain=domain)
+        if website_id:
+            queryset = queryset.filter(id=website_id)
+        queryset = self.filter_queryset_by_dates(queryset, dates_range)
+        queryset = queryset.annotate(total_visits=Count('visitmodel'))
 
-        # 日期过滤逻辑保持不变
-        if start_date:
-            start_date = datetime.strptime(start_date, "%Y-%m-%d")
-            queryset = queryset.filter(visitmodel__visit_time__date__gte=start_date)
-        if end_date:
-            end_date = datetime.strptime(end_date, "%Y-%m-%d")
-            queryset = queryset.filter(visitmodel__visit_time__date__lte=end_date)
-
-        # 在调用get_context_data之前设置object_list
-        self.object_list = queryset.distinct()
-
-        # 更新上下文以包括查询结果和原始表单数据
-        context = self.get_context_data()
-        context['form_data'] = request.POST
-        return render(request, self.template_name, context)
+        serializer = MonitorSerializer(queryset, many=True)
+        return Response(serializer.data, status=200)
 
 
 class WebsiteDetailView(DetailView):
@@ -287,3 +299,50 @@ class WebsiteDetailView(DetailView):
         print(f'datas: {datas}')
         context = {'website': website, 'datas': datas}
         return render(request, self.template_name, context)
+
+
+class ChartDataAPIView(APIView):
+    """
+    获取图表数据
+    """
+    def get(self, request, *args, **kwargs):
+        website_id = request.GET.get('id', '')
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=6)  # 包括今天在内的过去7天
+
+        # 确保website_id对应的WebsiteModel存在
+        if website_id and not WebsiteModel.objects.filter(id=website_id).exists():
+            return Response({'error': 'Website not found'}, status=404)
+
+        # 构建基础查询集
+        queryset = VisitModel.objects.filter(visit_time__range=(start_date, end_date))
+        if website_id:
+            queryset = queryset.filter(site__id=website_id)
+
+        # 按天分组，同时统计访问量和独立IP数量
+        stats_per_day = queryset.annotate(day=TruncDay('visit_time')) \
+                                .values('day') \
+                                .annotate(visit_total=Count('id'), ip_total=Count('http_x_forwarded_for', distinct=True)) \
+                                .order_by('day')
+
+        # 将查询结果转换为字典以便快速访问
+        stats_dict = {item['day'].strftime('%Y-%m-%d'): item for item in stats_per_day}
+
+        # 生成过去7天的每一天，并填充缺失的数据
+        data = {
+            'labels': [],
+            'visit_total': [],
+            'ip_total': [],
+        }
+        for single_date in (start_date + timedelta(n) for n in range((end_date - start_date).days + 1)):
+            date_str = single_date.strftime('%Y-%m-%d')
+            data['labels'].append(date_str)
+            if date_str in stats_dict:
+                data['visit_total'].append(stats_dict[date_str]['visit_total'])
+                data['ip_total'].append(stats_dict[date_str]['ip_total'])
+            else:
+                # 没有数据的日期填充为0
+                data['visit_total'].append(0)
+                data['ip_total'].append(0)
+
+        return Response(data, status=200)

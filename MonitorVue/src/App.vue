@@ -130,13 +130,14 @@ const visible = ref(false) // State to control the visibility of the sidebar
 .sidebar {
   width: 250px; /* Set the width of the sidebar */
   background: #f7f4f4; /* Example background color for the sidebar */
-  /* Add more styles for the sidebar as needed */
 }
 
 .main-content {
   flex-grow: 1; /* Allows the main content to take up the remaining space */
   padding: 20px; /* Add some padding */
-  /* Add more styles for the main content as needed */
+  background-color: var(--surface-color);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
 .toggle-button {

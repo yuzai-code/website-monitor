@@ -23,7 +23,9 @@ urlpatterns = [
 
     path('upload/', views.LogUpload.as_view(), name='log_upload'),
 
-    # path('website_list/', views.WebsiteListAPIView.as_view(), name='website_list'),
+    path('website_list/', views.WebsiteListAPIView.as_view(), name='website_list'),
+
     path('api/website_list/', views.WebsiteListAPIView.as_view(), name='website_list_api'),
+    path('api/chart_data/', views.ChartDataAPIView.as_view(), name='chart_data_api'),
     path('website_detail/<int:pk>/', views.WebsiteDetailView.as_view(), name='website_detail'),
 ]
