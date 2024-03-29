@@ -8,7 +8,13 @@
       :rowsPerPageOptions="[10, 20, 50]"
       tableStyle="min-width: 50rem"
     >
-      <Column field="domain" header="网站"></Column>
+      <Column field="domain" header="网站">
+        <template #body="slotProps">
+          <router-link :to="{ name: 'WebsiteDetail', params: { id: slotProps.data.id } }">
+            {{ slotProps.data.domain }}
+          </router-link>
+        </template>
+      </Column>
       <Column field="visit_total" header="访问量"></Column>
       <Column field="visitor_total" header="访客量"></Column>
       <Column field="ip_total" header="IP数"></Column>

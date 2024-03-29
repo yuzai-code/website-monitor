@@ -14,6 +14,7 @@ from django.shortcuts import render, redirect
 from django.utils.dateparse import parse_date
 from django.views.generic import CreateView, DetailView, ListView
 from pygrok import pygrok
+from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -272,33 +273,38 @@ class WebsiteListAPIView(APIView):
         return Response(serializer.data, status=200)
 
 
-class WebsiteDetailView(DetailView):
-    """
-    获取站点详情
-    """
-    model = WebsiteModel
-    template_name = 'website_detail.html'
-    context_object_name = 'website'
+class WebsiteDetailAPIView(RetrieveAPIView):
+    queryset = WebsiteModel.objects.all()
+    serializer_class = MonitorSerializer
 
-    def get(self, request, *args, **kwargs):
-        website = self.get_object()
-        visits = website.visitmodel_set.all()
-        # 查询ip访问量最高的10个IP
-        ips = Aggregation(domain=website.domain, index='visit').get_ip_aggregation(size=10)
-        # print(ips)
-        ips_10 = Aggregation(domain=website.domain, index='visit').get_10_ip_aggregation()
-        # print(ips_10)
-        context = {'website': website, 'visits': visits, 'ips': ips, 'ips_10': ips_10}
-        return render(request, self.template_name, context)
 
-    # 根据ip地址查询访问信息
-    def post(self, request, *args, **kwargs):
-        ip = request.POST.get('ip', '')
-        website = self.get_object()
-        datas = Aggregation(domain=website.domain, index='visit').search_ip(ip, size=10)
-        print(f'datas: {datas}')
-        context = {'website': website, 'datas': datas}
-        return render(request, self.template_name, context)
+# class WebsiteDetailView(DetailView):
+#     """
+#     获取站点详情
+#     """
+#     model = WebsiteModel
+#     template_name = 'website_detail.html'
+#     context_object_name = 'website'
+#
+#     def get(self, request, *args, **kwargs):
+#         website = self.get_object()
+#         visits = website.visitmodel_set.all()
+#         # 查询ip访问量最高的10个IP
+#         ips = Aggregation(domain=website.domain, index='visit').get_ip_aggregation(size=10)
+#         # print(ips)
+#         ips_10 = Aggregation(domain=website.domain, index='visit').get_10_ip_aggregation()
+#         # print(ips_10)
+#         context = {'website': website, 'visits': visits, 'ips': ips, 'ips_10': ips_10}
+#         return render(request, self.template_name, context)
+#
+#     # 根据ip地址查询访问信息
+#     def post(self, request, *args, **kwargs):
+#         ip = request.POST.get('ip', '')
+#         website = self.get_object()
+#         datas = Aggregation(domain=website.domain, index='visit').search_ip(ip, size=10)
+#         print(f'datas: {datas}')
+#         context = {'website': website, 'datas': datas}
+#         return render(request, self.template_name, context)
 
 
 class ChartDataAPIView(APIView):

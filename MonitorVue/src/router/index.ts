@@ -12,6 +12,11 @@ const router = createRouter({
       path: '/website',
       name: 'Website',
       component: () => import('../views/WebsiteView.vue')
+    },
+    {
+      path: '/website/:id',
+      name: 'WebsiteDetail',
+      component: () => import('../views/WebDetailView.vue')
     }
   ]
 })

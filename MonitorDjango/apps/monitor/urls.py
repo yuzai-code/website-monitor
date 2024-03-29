@@ -27,5 +27,5 @@ urlpatterns = [
 
     path('api/website_list/', views.WebsiteListAPIView.as_view(), name='website_list_api'),
     path('api/chart_data/', views.ChartDataAPIView.as_view(), name='chart_data_api'),
-    path('website_detail/<int:pk>/', views.WebsiteDetailView.as_view(), name='website_detail'),
+    path('api/website_detail/<int:pk>/', views.WebsiteDetailAPIView.as_view(), name='website_detail'),
 ]

@@ -7,7 +7,6 @@
     </div>
 
     <DataTable :customers="customers" />
-    <!-- <DataTable /> -->
   </div>
 </template>
 <script setup lang="ts">
