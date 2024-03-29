@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h1>站点统计</h1>
+    // 通过输入框来选择站点和时间段
+    <form action="" method="post">
+        {% csrf_token %}
+        <label for="domain">站点（下拉选择）：</label>
+        <select name="domain" id="domain">
+            <option value="">所有站点</option>
+            {% for website in websites %}
+                <option value="{{ website.domain }}"
+                        {% if form_data.domain == website.domain %}selected{% endif %}>{{ website.domain }}</option>
+            {% endfor %}
+        </select>
+        <label for="domain_text">或输入站点：</label>
+        <input type="text" name="domain_text" id="domain_text" value="{{ form_data.domain_text }}">
+        <label for="start_date">开始日期：</label>
+        <input type="date" name="start_date" id="start_date" value="{{ form_data.start_date }}">
+        <label for="end_date">结束日期：</label>
+        <input type="date" name="end_date" id="end_date" value="{{ form_data.end_date }}">
+        <input type="submit" value="查询">
+    </form>
+
+    {% for website in websites %}
+        <p><a href="{% url 'website_detail' pk=website.id %}">{{ website.domain }}</a> -
+            访问次数：{{ website.visit_total }}，总ip数: {{ website.ip_total }}，访问人数：{{ website.visitor_total }}，流量总数：{{ website.data_transfer_total }}，错误数：{{ website.error_total }}，每秒请求次数：{{ website.request_per_second }}
+        </p>
+    {% endfor %}
+{% endblock %}

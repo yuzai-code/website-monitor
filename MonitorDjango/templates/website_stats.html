@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+    <form method="get" action="{% url 'website_stats' %}">
+        <select name="website">
+            {% for website in websites %}
+                <option value="{{ website.domain }}">{{ website.domain }}</option>
+            {% endfor %}
+        </select>
+        <input type="text" name="website" placeholder="Search domain">
+        <input type="submit" value="Submit">
+    </form>
+    {{ data }}
+    <p>IP Total: {{ data.ip_total | default:"0" }}</p>
+    <p>Visit Total: {{ data.visit_total | default:"0" }}</p>
+    <p>Data Transfer Total: {{ data.data_transfer_total | default:"0" }}</p>
+    <p>Visitor Total: {{ data.visitor_total | default:"0" }}</p>
+{% endblock %}
