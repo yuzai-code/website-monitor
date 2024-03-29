@@ -1,1 +1,9 @@
 /MonitorDjango/logs/
+/MonitorDjango/media/
+/MonitorDjango/test/
+/MonitorDjango/monitor_venv.zip
+/MonitorDjango/test.zip/
+/MonitorDjango/media
+/monitor_venv.zip
+/monitor_venv/.idea/
+/monitor_venv/.vscode/
