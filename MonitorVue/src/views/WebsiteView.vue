@@ -1,6 +1,12 @@
 <template>
   <div class="container">
     <div class="calendar-container">
+      <label class="label">网站：</label>
+      <div class="card flex justify-content-center">
+        <Dropdown v-model="selectedItem" :options="customers" filter optionLabel="domain" placeholder="输入域名"
+          class="w-full md:w-14rem">
+        </Dropdown>
+      </div>
       <label class="label">时间：</label>
       <Calendar v-model="dates" selectionMode="range" :manualInput="false" />
       <Button label="查询" @click="fetchData" />
@@ -11,12 +17,13 @@
 </template>
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import CardData from '@/components/CardData.vue'
 import DataTable from '@/components/DataTable.vue'
 import axios from 'axios'
+import Dropdown from 'primevue/dropdown';
 
 const dates = ref([])
 const customers = ref([])
+const selectedItem = ref(null)
 
 // 定义一个函数来设置初始日期为今天
 const setTodayAsDefaultDate = () => {
@@ -32,9 +39,9 @@ const fetchData = async () => {
   try {
     // 假设使用 GET 请求获取客户数据
     const responseSite = await axios.get('http://127.0.0.1:8000/api/website_list/', {
-      params: { dates: dates.value }
+      params: data
     })
-    console.log('Website list:', responseSite.data)
+    console.log('Website list111111111111:', responseSite.data)
     customers.value = responseSite.data
   } catch (error) {
     console.error('Request failed:', error)
@@ -57,10 +64,12 @@ onMounted(() => {
   padding: 20px;
   gap: 20px;
 }
+
 .calendar-container {
   display: flex;
   gap: 10px;
 }
+
 .label {
   align-self: center;
 }

@@ -13,13 +13,17 @@ class VisitSerializer(serializers.ModelSerializer):
 
 # 序列化器
 class MonitorSerializer(serializers.ModelSerializer):
-    total_visits = serializers.IntegerField(source='visit_total', read_only=True)
-    visits = VisitSerializer(source='visitmodel_set', many=True, read_only=True)
+    visits = serializers.SerializerMethodField()
+
+    def get_visits(self, obj):
+        # 是否需要展示嵌套数据
+        if self.context.get('need_nested', False):
+            return VisitSerializer(obj.visits.all(), many=True).data
+        return None
 
     class Meta:
         model = WebsiteModel
-        fields = ['id', 'domain', 'site_name', 'deploy_status', 'ip_total', 'visit_total', 'data_transfer_total',
-                  'visitor_total', 'error_total', 'malicious_request_total', 'request_per_second',
-                  'total_visits', 'visits'
-
+        fields = ['id', 'domain', 'site_name', 'deploy_status',
+                  'error_total', 'malicious_request_total', 'request_per_second',
+                  'visits'
                   ]

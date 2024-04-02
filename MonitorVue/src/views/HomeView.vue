@@ -10,6 +10,7 @@
       <Button label="查询" @click="submit" />
     </div>
     <CardData :websiteData="websiteData" />
+    <p>7天内统计</p>
     <ChartData :websiteId="websiteId" />
   </div>
 </template>
@@ -52,7 +53,7 @@ const submit = async () => {
   try {
     const response = await axios.post('http://127.0.0.1:8000/api/website_list/', data)
     console.log('Response:', response.data)
-    websiteData.value = response.data[0]
+    websiteData.value = response.data
   } catch (error) {
     console.error('Request failed:', error)
   }
@@ -77,18 +78,23 @@ onMounted(() => {
   padding: 20px;
   gap: 20px;
 }
+
 .child {
   width: 50%;
 }
+
 .input-list {
   display: flex;
-  align-items: center; /* 垂直居中 */
-  gap: 10px; /* 元素之间的间隙 */
+  align-items: center;
+  /* 垂直居中 */
+  gap: 10px;
+  /* 元素之间的间隙 */
   /* padding-bottom: 30px; 底部填充 */
 }
 
 .input,
 .calendar-container {
-  min-width: 200px; /* 日历最小宽度 */
+  min-width: 200px;
+  /* 日历最小宽度 */
 }
 </style>

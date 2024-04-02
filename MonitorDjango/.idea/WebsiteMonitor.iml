@@ -18,9 +18,10 @@
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
       <excludeFolder url="file://$MODULE_DIR$/test" />
+      <excludeFolder url="file://$MODULE_DIR$/venv" />
       <excludeFolder url="file://$MODULE_DIR$/lvenv" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.7 (MonitorDjango)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.7 (MonitorDjango) (3)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TemplatesService">

@@ -67,7 +67,7 @@ class VisitModel(BaseModel):
     data_transfer = models.BigIntegerField(verbose_name='数据传输总量')
     http_referer = models.CharField(max_length=255, verbose_name='HTTP_REFERER', blank=True, null=True)
     malicious_request = models.BooleanField(default=False, verbose_name='是否恶意请求', db_index=True)
-    http_x_forwarded_for = models.CharField(max_length=100, verbose_name='实际的客户端IP', blank=True, null=True)
+    http_x_forwarded_for = models.CharField(max_length=100, verbose_name='实际的客户端IP', blank=True, null=True,db_index=True)
     request_time = models.FloatField(verbose_name='请求时间', blank=True, null=True)
 
     class Meta:

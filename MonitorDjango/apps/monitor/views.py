@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.db.models import Count, Q, Avg, Sum
+from django.db.models import Count, Q, Avg, Sum, F
 from django.db.models.functions import TruncDay
 from django.forms import model_to_dict
 from django.http import JsonResponse
@@ -245,7 +245,9 @@ class WebsiteListAPIView(APIView):
         """根据日期范围过滤查询集"""
         if dates_range:
             start_date, end_date = dates_range
+            print('222', queryset, start_date, end_date)
             queryset = queryset.filter(visitmodel__visit_time__range=(start_date, end_date))
+            print('1111', queryset)
         return queryset
 
     def get(self, request, format=None):
@@ -255,22 +257,45 @@ class WebsiteListAPIView(APIView):
         queryset = self.filter_queryset_by_dates(queryset, dates_range)
         queryset = queryset.annotate(total_visits=Count('visitmodel'))
 
-        serializer = MonitorSerializer(queryset, many=True)
-        return Response(serializer.data)
+        serializer = MonitorSerializer(instance=queryset, many=True, context={'need_nested': False})
+        return Response(serializer.data, status=200)
 
     def post(self, request, *args, **kwargs):
         website_id = request.data.get('id', '')
         dates = request.data.get('dates', [])
+        print(f'dates: {dates}, website_id: {website_id}')
         dates_range = self.get_dates_range(dates)
-        queryset = WebsiteModel.objects.all()
-
-        if website_id:
-            queryset = queryset.filter(id=website_id)
+        print(f'dates_range: {dates_range}')
+        # 仅对有必要的记录进行查询，避免全表扫描
+        queryset = WebsiteModel.objects.filter(id=website_id) if website_id else WebsiteModel.objects.all()
+        print(queryset)
         queryset = self.filter_queryset_by_dates(queryset, dates_range)
-        queryset = queryset.annotate(total_visits=Count('visitmodel'))
+        print(queryset)
+        # 对 visitmodel__http_x_forwarded_for 进行去重计数以获得 IP 总数
+        ip_totals = queryset.annotate(distinct_ip=Count('visitmodel__http_x_forwarded_for', distinct=True))
 
-        serializer = MonitorSerializer(queryset, many=True)
-        return Response(serializer.data, status=200)
+        # 对整个查询集进行计数以获得访问总数
+        visit_totals = queryset.annotate(total_visits=Count('visitmodel'))
+
+        # 对 visitmodel__http_x_forwarded_for 和 visitmodel__user_agent 的组合进行去重以获得唯一访客数
+        visitor_totals = queryset.values('visitmodel__http_x_forwarded_for',
+                                         'visitmodel__user_agent').distinct().count()
+
+        # 直接计算数据传输总量
+        data_transfer_totals = queryset.aggregate(data_transfer_totals=Sum('visitmodel__data_transfer'))[
+            'data_transfer_totals']
+
+        # 由于前面的查询都是基于同一个 queryset，它们可以结合在一起执行，减少数据库访问次数
+        aggregated_data = {
+            'visitor_totals': visitor_totals,
+            'ip_totals': ip_totals.first().distinct_ip if ip_totals.exists() else 0,
+            'visit_totals': visit_totals.first().total_visits if visit_totals.exists() else 0,
+            'data_transfer_totals': data_transfer_totals,
+        }
+
+        print(aggregated_data)
+        # 由于聚合结果直接返回字典，所以不需要额外的处理就可以直接使用
+        return Response(aggregated_data, status=200)
 
 
 class WebsiteDetailAPIView(RetrieveAPIView):
@@ -311,6 +336,7 @@ class ChartDataAPIView(APIView):
     """
     获取图表数据
     """
+
     def get(self, request, *args, **kwargs):
         website_id = request.GET.get('id', '')
         end_date = datetime.now()
@@ -327,9 +353,9 @@ class ChartDataAPIView(APIView):
 
         # 按天分组，同时统计访问量和独立IP数量
         stats_per_day = queryset.annotate(day=TruncDay('visit_time')) \
-                                .values('day') \
-                                .annotate(visit_total=Count('id'), ip_total=Count('http_x_forwarded_for', distinct=True)) \
-                                .order_by('day')
+            .values('day') \
+            .annotate(visit_total=Count('id'), ip_total=Count('http_x_forwarded_for', distinct=True)) \
+            .order_by('day')
 
         # 将查询结果转换为字典以便快速访问
         stats_dict = {item['day'].strftime('%Y-%m-%d'): item for item in stats_per_day}

@@ -104,7 +104,7 @@ DATABASES = {
         'USER': 'postgres',  # 设置的数据库用户名
         'PASSWORD': 'mypass',  # 设置的密码
         # 'HOST': 'postgres',
-        'HOST': '127.0.0.1',  # 本地主机或数据库服务器的ip
+        'HOST': '172.18.0.2',  # 本地主机或数据库服务器的ip
         'PORT': '5432',  # 数据库使用的端口
     }
 }
