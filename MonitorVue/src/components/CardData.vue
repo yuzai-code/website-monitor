@@ -1,5 +1,7 @@
 <template>
+  <p>按日期统计总量</p>
   <div class="card-data" v-if="websiteData">
+
     <div class="data-item">
       <span class="label-card">访客量</span>
       <span class="value">{{ websiteData.visitor_totals }}</span>

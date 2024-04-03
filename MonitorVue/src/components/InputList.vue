@@ -1,10 +1,5 @@
 <template>
-  <AutoComplete
-    v-model="selectedItem"
-    optionLabel="domain"
-    :suggestions="filteredWebsites"
-    @complete="search"
-  >
+  <AutoComplete v-model="selectedItem" optionLabel="domain" :suggestions="filteredWebsites" @complete="search">
   </AutoComplete>
 </template>
 

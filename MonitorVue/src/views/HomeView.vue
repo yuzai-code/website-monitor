@@ -9,6 +9,25 @@
       </div>
       <Button label="查询" @click="submit" />
     </div>
+
+ 
+    <div class="upload-container">
+      上传nginx日志文件:
+      <div class="card-upload">
+        域名：
+        <InputText type="text" v-model="value" />
+      </div>
+      <div class="card-upload">
+        日志格式：
+        <InputText type="text" v-model="value" />
+      </div>
+      <div class="upload-button-container">
+        <Toast />
+        <FileUpload mode="basic" name="demo[]" url="/api/upload" accept=".log,.txt,application/zip,application/x-tar"
+          :maxFileSize="1000000000" @upload="onUpload" />
+      </div>
+    </div>
+
     <CardData :websiteData="websiteData" />
     <p>7天内统计</p>
     <ChartData :websiteId="websiteId" />
@@ -70,6 +89,46 @@ onMounted(() => {
 
 
 <style scoped>
+.upload-container {
+  display: flex;
+  align-items: center;
+  /* 垂直居中 */
+  justify-content: space-around;
+  /* 在主轴上平均分布 */
+  padding: 20px;
+  gap: 20px;
+  /* 组件之间的间隙 */
+  background-color: #f5f5f5;
+  /* 背景色 */
+  border-radius: 8px;
+  /* 圆角边框 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  /* 盒子阴影 */
+}
+
+.card-upload {
+  flex: 1;
+  /* flex项目的扩展比例 */
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  /* 输入框和标签之间的间隙 */
+}
+
+.card-upload>InputText {
+  flex-grow: 1;
+  /* 输入框占据剩余空间 */
+}
+
+.upload-button-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  /* 上传按钮的容器宽度 */
+}
+
 .container {
   width: 100%;
   display: flex;

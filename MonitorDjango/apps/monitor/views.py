@@ -250,14 +250,30 @@ class WebsiteListAPIView(APIView):
             print('1111', queryset)
         return queryset
 
-    def get(self, request, format=None):
-        dates = request.GET.getlist('dates[]')
-        dates_range = self.get_dates_range(dates)
+    def get(self, request, *args, **kwargs):
         queryset = WebsiteModel.objects.all()
-        queryset = self.filter_queryset_by_dates(queryset, dates_range)
-        queryset = queryset.annotate(total_visits=Count('visitmodel'))
+        need_nested = request.query_params.get('need_nested', 'false').lower() in ['true', '1', 'yes']
+        search_text = request.query_params.get('search', '')
+        print('search_text', search_text)
+        if search_text:
+            # 模糊查询内容
+            queryset = queryset.filter(domain__icontains=search_text)
+            print(queryset)
+            serializer = MonitorSerializer(queryset, many=True)
+            return Response(serializer.data, 200)
+        # 接收input参数，而不是fields
+        input_fields = request.query_params.get('input')
+        if input_fields:
+            input_fields = input_fields.split(',')
 
-        serializer = MonitorSerializer(instance=queryset, many=True, context={'need_nested': False})
+        context = {
+            'need_nested': need_nested,
+            'request': request,
+        }
+
+        # 传递input_fields给序列化器
+        serializer = MonitorSerializer(queryset, many=True, context=context,
+                                       fields=input_fields if input_fields else None)
         return Response(serializer.data, status=200)
 
     def post(self, request, *args, **kwargs):
@@ -268,9 +284,7 @@ class WebsiteListAPIView(APIView):
         print(f'dates_range: {dates_range}')
         # 仅对有必要的记录进行查询，避免全表扫描
         queryset = WebsiteModel.objects.filter(id=website_id) if website_id else WebsiteModel.objects.all()
-        print(queryset)
         queryset = self.filter_queryset_by_dates(queryset, dates_range)
-        print(queryset)
         # 对 visitmodel__http_x_forwarded_for 进行去重计数以获得 IP 总数
         ip_totals = queryset.annotate(distinct_ip=Count('visitmodel__http_x_forwarded_for', distinct=True))
 
@@ -283,7 +297,7 @@ class WebsiteListAPIView(APIView):
 
         # 直接计算数据传输总量
         data_transfer_totals = queryset.aggregate(data_transfer_totals=Sum('visitmodel__data_transfer'))[
-            'data_transfer_totals']
+                                   'data_transfer_totals'] or 0
 
         # 由于前面的查询都是基于同一个 queryset，它们可以结合在一起执行，减少数据库访问次数
         aggregated_data = {
@@ -301,35 +315,6 @@ class WebsiteListAPIView(APIView):
 class WebsiteDetailAPIView(RetrieveAPIView):
     queryset = WebsiteModel.objects.all()
     serializer_class = MonitorSerializer
-
-
-# class WebsiteDetailView(DetailView):
-#     """
-#     获取站点详情
-#     """
-#     model = WebsiteModel
-#     template_name = 'website_detail.html'
-#     context_object_name = 'website'
-#
-#     def get(self, request, *args, **kwargs):
-#         website = self.get_object()
-#         visits = website.visitmodel_set.all()
-#         # 查询ip访问量最高的10个IP
-#         ips = Aggregation(domain=website.domain, index='visit').get_ip_aggregation(size=10)
-#         # print(ips)
-#         ips_10 = Aggregation(domain=website.domain, index='visit').get_10_ip_aggregation()
-#         # print(ips_10)
-#         context = {'website': website, 'visits': visits, 'ips': ips, 'ips_10': ips_10}
-#         return render(request, self.template_name, context)
-#
-#     # 根据ip地址查询访问信息
-#     def post(self, request, *args, **kwargs):
-#         ip = request.POST.get('ip', '')
-#         website = self.get_object()
-#         datas = Aggregation(domain=website.domain, index='visit').search_ip(ip, size=10)
-#         print(f'datas: {datas}')
-#         context = {'website': website, 'datas': datas}
-#         return render(request, self.template_name, context)
 
 
 class ChartDataAPIView(APIView):
