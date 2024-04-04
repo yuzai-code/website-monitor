@@ -4,6 +4,7 @@ from monitor.models import WebsiteModel, VisitModel
 
 
 class VisitSerializer(serializers.ModelSerializer):
+    visit_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
     class Meta:
         model = VisitModel
         fields = ['id', 'site', 'visit_time', 'remote_addr', 'user_agent',
@@ -33,7 +34,7 @@ class MonitorSerializer(serializers.ModelSerializer):
         # 检查是否需要展示嵌套数据
         if self.context.get('need_nested', False):
             # 假设VisitSerializer已定义且正确实现
-            return VisitSerializer(obj.visits.all(), many=True).data
+            return VisitSerializer(obj.visitmodel_set.all(), many=True).data
         else:
             # 如果不需要嵌套数据，返回None或其他适当的值
             return None

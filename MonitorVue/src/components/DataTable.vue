@@ -1,13 +1,6 @@
-
 <template>
   <div class="card">
-    <DataTable
-      :value="customers"
-      paginator
-      :rows="10"
-      :rowsPerPageOptions="[10, 20, 50]"
-      tableStyle="min-width: 50rem"
-    >
+    <DataTable :value="customers" paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]" tableStyle="min-width: 50rem">
       <Column field="domain" header="网站">
         <template #body="slotProps">
           <router-link :to="{ name: 'WebsiteDetail', params: { id: slotProps.data.id } }">
@@ -40,8 +33,9 @@ defineProps({
 
 <style scoped>
 @media (max-width: 600px) {
-  .card .p-datatable .p-datatable-thead > tr > th,
-  .card .p-datatable .p-datatable-tbody > tr > td {
+
+  .card .p-datatable .p-datatable-thead>tr>th,
+  .card .p-datatable .p-datatable-tbody>tr>td {
     /* 在屏幕宽度较小的情况下调整字体大小、内边距等 */
     padding: 8px;
     font-size: 0.8rem;

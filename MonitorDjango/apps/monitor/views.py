@@ -178,7 +178,7 @@ class LogUpload(CreateView):
                         user_agent=log.get('http_user_agent', ''),
                         defaults={
                             # 'user_agent': log.get('http_user_agent', ''),
-                            'path': log.get('request_uri').split('//')[3:],
+                            'path': log.get('request_uri'),
                             'method': log.get('request_method'),
                             'status_code': log.get('status'),
                             'data_transfer': log.get('body_bytes_sent'),
@@ -198,7 +198,7 @@ class LogUpload(CreateView):
                         user_agent=log.get('http_user_agent', ''),
                         defaults={
                             # 'user_agent': log.get('http_user_agent', ''),
-                            'path': log.get('request_uri').split('//')[3:],
+                            'path': log.get('request_uri'),
                             'method': log.get('request_method'),
                             'status_code': log.get('status'),
                             'data_transfer': log.get('body_bytes_sent'),
@@ -268,7 +268,6 @@ class WebsiteListAPIView(APIView):
         queryset = WebsiteModel.objects.all()
         need_nested = request.query_params.get('need_nested', 'false').lower() in ['true', '1', 'yes']
         search_text = request.query_params.get('search', '')
-        print('search_text', search_text)
         if search_text:
             # 模糊查询内容
             queryset = queryset.filter(domain__icontains=search_text)
@@ -329,6 +328,11 @@ class WebsiteListAPIView(APIView):
 class WebsiteDetailAPIView(RetrieveAPIView):
     queryset = WebsiteModel.objects.all()
     serializer_class = MonitorSerializer
+
+    def get_serializer_context(self):
+        context = super(WebsiteDetailAPIView, self).get_serializer_context()
+        context.update({'need_nested': True})  # 设置 need_nested
+        return context
 
 
 class ChartDataAPIView(APIView):

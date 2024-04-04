@@ -28,6 +28,8 @@ import ToastService from 'primevue/toastservice'
 import FileUpload from 'primevue/fileupload'
 import InputText from 'primevue/inputtext'
 import Card from 'primevue/card'
+import ColumnGroup from 'primevue/columngroup' // optional
+import Row from 'primevue/row' // optional
 
 const app = createApp(App)
 
@@ -40,6 +42,8 @@ app.use(router)
 // app.component('Button', Button)
 // eslint-disable-next-line vue/multi-word-component-names
 app.component('Accordion', Accordion)
+app.component('ColumnGroup', ColumnGroup)
+app.component('Row', Row)
 app.component('AccordionTab', AccordionTab)
 app.component('AutoComplete', AutoComplete)
 // eslint-disable-next-line vue/multi-word-component-names

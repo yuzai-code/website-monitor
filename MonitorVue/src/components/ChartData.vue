@@ -34,7 +34,7 @@ const transformDataToChartData = (apiData) => {
     labels: apiData.labels,
     datasets: [
       {
-        label: '访问量',
+        label: '请求数',
         data: apiData.visit_total,
         fill: false,
         borderColor: '#42A5F5',

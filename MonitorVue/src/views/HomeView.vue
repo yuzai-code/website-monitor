@@ -24,8 +24,7 @@
       <div class="upload-button-container">
         <Toast />
         <FileUpload mode="basic" ref="fileUpload" name="upload_file" url="/api/upload"
-          accept=".log,.txt,application/zip,application/x-tar" :maxFileSize="1000000000" @upload="onUpload" customUpload
-          :auto="false" />
+          accept=".log,.txt,application/zip,application/x-tar" :maxFileSize="1000000000" customUpload :auto="false" />
       </div>
       <Button label="上传" @click="submit_up" />
     </div>
@@ -42,11 +41,17 @@ import InputList from '@/components/InputList.vue'
 import ChartData from '@/components/ChartData.vue'
 import CardData from '@/components/CardData.vue'
 import axios from 'axios'
-import monent from 'moment'
+import moment from 'moment';
+
 
 const dates = ref()
 const selectedWebSite = ref(null)
-const websiteData = ref([])
+const websiteData = ref({
+  visitor_totals: 0,
+  ip_totals: 0,
+  visit_totals: 0,
+  data_transfer_totals: 0
+});
 const websiteId = ref(null)
 const defaultWebsiteId = 1905
 const domain = ref('')
@@ -80,10 +85,10 @@ const submit_up = async () => {
 
 
 
-// const setTodayAsDefaultDate = () => {
-//   const today = new Date()
-//   dates.value = [today, today]
-// }
+const setTodayAsDefaultDate = () => {
+  const today = new Date()
+  dates.value = [today, today]
+}
 
 const defaultWebsite = { id: defaultWebsiteId, domain: 'us.rajabandot.top' }
 
@@ -99,7 +104,7 @@ const submit = async () => {
   }
   const data = {
     id: selectedWebSite.value.id,
-    dates: dates.value.map((date) => monent(date).format('YYYY-MM-DD'))
+    dates: dates.value.map((date) => moment(date).format('YYYY-MM-DD'))
   }
   websiteId.value = selectedWebSite.value.id
   console.log('Data:', data)

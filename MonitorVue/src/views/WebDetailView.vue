@@ -1,13 +1,22 @@
 <template>
-  <div>
-    <span>WebDetailView</span>
-  </div>
+  <Card>
+    <template #title>{{ WebsiteDetail.domain }} 网站日志的详细信息</template>
+    <template #content>
+      <p class="m-0">
+
+      </p>
+    </template>
+  </Card>
+  <FilterDisplay :WebsiteDetail="WebsiteDetail" />
+
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useRoute } from 'vue-router'
+import Card from 'primevue/card';          // optional
+import FilterDisplay from '@/components/FilterDisplay.vue'; // optional
 
 const route = useRoute()
 const WebsiteDetail = ref([])
@@ -28,5 +37,4 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

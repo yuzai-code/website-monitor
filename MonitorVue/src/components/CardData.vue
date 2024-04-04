@@ -26,7 +26,7 @@
 
 <script setup lang="ts">
 defineProps({
-  websiteData: Array
+  websiteData: Object
 })
 </script>
 
