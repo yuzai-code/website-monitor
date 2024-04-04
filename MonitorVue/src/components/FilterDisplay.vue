@@ -17,19 +17,35 @@
                 </template>
             </Column>
 
-            <!-- 为 http_x_forwarded_for 使用 Dropdown 作为筛选器 -->
+            <!-- 为 http_x_forwarded_for 使用 InputText 作为筛选器 -->
             <Column field="http_x_forwarded_for" header="http_x_forwarded_for Code" :filter="true">
                 <template #filter="{ filterModel, filterCallback }">
                     <InputText v-model="filterModel.value" @keydown.enter="filterCallback" class="p-column-filter"
-                        placeholder="按 Remote Address 过滤" />
+                        placeholder="" />
                 </template>
             </Column>
 
-            <!-- 为 http_x_forwarded_for 使用 Dropdown 作为筛选器 -->
-            <Column field="user_agent" header="user_agent" :filter="true">
+            <!-- 为 http_x_forwarded_for 使用 InputText 作为筛选器 -->
+            <Column field="path" header="路径" :filter="true">
                 <template #filter="{ filterModel, filterCallback }">
                     <InputText v-model="filterModel.value" @keydown.enter="filterCallback" class="p-column-filter"
-                        placeholder="按 Remote Address 过滤" />
+                        placeholder="" />
+                </template>
+            </Column>
+
+            <!-- 为 user_agent 使用 InputText 作为筛选器 -->
+            <Column field="user_agent" header="User Agent" :filter="true">
+                <template #filter="{ filterModel, filterCallback }">
+                    <InputText v-model="filterModel.value" @keydown.enter="filterCallback" class="p-column-filter"
+                        placeholder="按 user_agent 过滤" />
+                </template>
+            </Column>
+
+            <!-- 为 data_transfer 使用 InputText 作为筛选器 -->
+            <Column field="data_transfer" header="流量" :filter="true">
+                <template #filter="{ filterModel, filterCallback }">
+                    <InputText v-model="filterModel.value" @keydown.enter="filterCallback" class="p-column-filter"
+                        placeholder="" />
                 </template>
             </Column>
 
@@ -94,6 +110,7 @@ const columns = ref([
     { field: 'http_x_forwarded_for', header: 'http_x_forwarded_for', sortable: true, filter: true },
     { field: 'user_agent', header: 'User Agent' },
     { field: 'path', header: 'path' },
+    { field: 'data_transfer', header: 'Data Transfer', sortable: true },
     { field: 'visit_time', header: 'Visit Time', sortable: true },
     { field: 'status_code', header: 'status_code', filter: true },
     { field: 'malicious_request', header: '是否恶意请求', filter: true },
@@ -106,6 +123,7 @@ const filters = ref({
     'user_agent': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     'path': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     'visit_time': { value: null, matchMode: FilterMatchMode.DATE_IS },
+    'data_transfer': { value: null, matchMode: FilterMatchMode.EQUALS },
     'status_code': { value: null, matchMode: FilterMatchMode.EQUALS },
     'malicious_request': { value: null, matchMode: FilterMatchMode.CUSTOM },
     'method': { value: null, matchMode: FilterMatchMode.EQUALS },
