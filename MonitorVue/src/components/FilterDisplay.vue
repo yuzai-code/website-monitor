@@ -18,7 +18,7 @@
             </Column>
 
             <!-- 为 http_x_forwarded_for 使用 InputText 作为筛选器 -->
-            <Column field="http_x_forwarded_for" header="http_x_forwarded_for Code" :filter="true">
+            <Column field="http_x_forwarded_for" header="http_x_forwarded_for" :filter="true">
                 <template #filter="{ filterModel, filterCallback }">
                     <InputText v-model="filterModel.value" @keydown.enter="filterCallback" class="p-column-filter"
                         placeholder="" />
@@ -80,14 +80,17 @@
 
 
 <script setup>
-import { ref, defineProps } from 'vue';
+import { ref, defineProps, watch } from 'vue';
 import { FilterMatchMode } from 'primevue/api';
 import Dropdown from 'primevue/dropdown';
 import TriStateCheckbox from 'primevue/tristatecheckbox';
 
-defineProps({
-    WebsiteDetail: Object
+const props = defineProps({
+    WebsiteDetail: Object,
+    ip: String
 });
+
+
 const statuses = ref([
     { label: '200 OK', value: '200' },
     { label: '404 Not Found', value: '404' },
@@ -129,5 +132,11 @@ const filters = ref({
     'method': { value: null, matchMode: FilterMatchMode.EQUALS },
 });
 
+//  监听ip的变化
+watch(() => props.ip, (newIp) => {
+    if (newIp) {
+        filters.value['http_x_forwarded_for'].value = newIp;
+    }
+}, { immediate: true });
 
 </script>

@@ -17,15 +17,37 @@ class Aggregation:
         s = Search(using=self.es, index=self.index)
         print(self.domain)
         s = s.filter('term', domain__keyword=self.domain)
-        s.aggs.bucket('ip', 'terms', field='http_x_forwarded_for', size=size)
+        s.aggs.bucket('ip', 'terms', field='http_x_forwarded_for', size=15)
         response = s.execute()
         return response.aggregations.ip.buckets
 
-    def get_10_ip_aggregation(self):
-        # 获取ip前10
+    def get_10_ip_aggregation_min(self):
+        # 获取过去5分钟内ip数量最多的前10个
         s = Search(using=self.es, index=self.index)
-        s = s.filter('range', **{'@timestamp': {'gte': 'now-24h', 'lte': 'now'}})
-        s.aggs.bucket('ip', 'terms', field='http_x_forwarded_for', size=10)
+        s = s.filter('term', domain__keyword=self.domain)
+        s = s.filter('range', **{'visit_time': {
+            'gte': 'now-5m/m', 'lte': 'now/m'
+        }})
+        s.aggs.bucket('ip', 'terms', field='http_x_forwarded_for', size=15)
+        response = s.execute()
+        return response.aggregations.ip.buckets
+
+    def get_10_ip_aggregation_hour(self):
+        # 获取过去一个小时内ip数量最多的前10个
+        s = Search(using=self.es, index=self.index)
+        s = s.filter('term', domain__keyword=self.domain)
+        s = s.filter('range', **{'visit_time': {'gte': 'now-1h', 'lte': 'now'}})
+        s.aggs.bucket('ip', 'terms', field='http_x_forwarded_for', size=15)
+        response = s.execute()
+        return response.aggregations.ip.buckets
+
+    def get_10_ip_aggregation_day(self):
+        # 获取今天一天内ip数量最多的前10各
+        s = Search(using=self.es, index=self.index)
+        s = s.filter('term', domain__keyword=self.domain)
+        # 将时间范围过滤调整为过去24小时  # todo 之后可以使用@timestamp
+        s = s.filter('range', **{'visit_time': {'gte': 'now-24h/h', 'lte': 'now/h'}})
+        s.aggs.bucket('ip', 'terms', field='http_x_forwarded_for', size=15)
         response = s.execute()
         return response.aggregations.ip.buckets
 

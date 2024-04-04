@@ -7,7 +7,7 @@
       </p>
     </template>
   </Card>
-  <FilterDisplay :WebsiteDetail="WebsiteDetail" />
+  <FilterDisplay :WebsiteDetail="WebsiteDetail" :ip="route.params.ip" />
 
 </template>
 
@@ -20,6 +20,8 @@ import FilterDisplay from '@/components/FilterDisplay.vue'; // optional
 
 const route = useRoute()
 const WebsiteDetail = ref([])
+
+
 
 const fetchData = async () => {
   const websiteId = route.params.id

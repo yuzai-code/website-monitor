@@ -1,25 +1,44 @@
 <template>
-  <AutoComplete v-model="selectedItem" optionLabel="domain" :suggestions="filteredWebsites" @complete="search">
-  </AutoComplete>
+  <AutoComplete v-model="selectedItem" optionLabel="domain" :suggestions="filteredWebsites" @complete="search"
+    @update:modelValue="handleSelectionChange"></AutoComplete>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, defineEmits } from 'vue'
 import axios from 'axios'
 
 const website = ref([])
 const selectedItem = ref(null)
 const filteredWebsites = ref([])
+// const emit = defineEmits(['getWebsiteId'])
+const autoCompleteInput = ref('');
+
+const handleSelectionChange = (newValue) => {
+  selectedItem.value = newValue;
+  autoCompleteInput.value = newValue ? newValue.domain : ''; // 假设newValue包含domain属性
+  sessionStorage.setItem('selectedItem', JSON.stringify(newValue));
+  // emit('getWebsiteId', newValue ? newValue.id : null);
+};
+
 
 onMounted(async () => {
-  try {
-    const response = await axios.get('http://127.0.0.1:8000/api/website_list')
-    website.value = response.data
-    console.log('Website list:', website.value)
-  } catch (error) {
-    console.error('Request failed:', error)
+  // 尝试从 sessionStorage 获取保存的选中项
+  const savedItem = sessionStorage.getItem('selectedItem');
+  if (savedItem) {
+    selectedItem.value = JSON.parse(savedItem);
   }
-})
+
+  try {
+    const response = await axios.get('http://127.0.0.1:8000/api/website_list');
+    website.value = response.data;
+    // 更新 filteredWebsites 以反映可能从 sessionStorage 恢复的选中项
+    filteredWebsites.value = [...website.value];
+    // console.log('Website list:', website.value);
+  } catch (error) {
+    console.error('Request failed:', error);
+  }
+});
+
 
 const search = (event) => {
   if (event.query.trim().length === 0) {

@@ -15,6 +15,7 @@ from django.shortcuts import render, redirect
 from django.utils.dateparse import parse_date
 from django.views.generic import CreateView, DetailView, ListView
 from pygrok import pygrok
+from rest_framework import status
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -287,7 +288,7 @@ class WebsiteListAPIView(APIView):
         # 传递input_fields给序列化器
         serializer = MonitorSerializer(queryset, many=True, context=context,
                                        fields=input_fields if input_fields else None)
-        return Response(serializer.data, status=200)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         website_id = request.data.get('id', '')
@@ -322,7 +323,7 @@ class WebsiteListAPIView(APIView):
 
         print(aggregated_data)
         # 由于聚合结果直接返回字典，所以不需要额外的处理就可以直接使用
-        return Response(aggregated_data, status=200)
+        return Response(aggregated_data, status=status.HTTP_200_OK)
 
 
 class WebsiteDetailAPIView(RetrieveAPIView):
@@ -380,4 +381,50 @@ class ChartDataAPIView(APIView):
                 data['visit_total'].append(0)
                 data['ip_total'].append(0)
 
-        return Response(data, status=200)
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class IpListAPIView(APIView):
+    @staticmethod
+    def get_object(pk):
+        try:
+            website = WebsiteModel.objects.get(pk=pk)
+            return website
+        except WebsiteModel.DoesNotExist:
+            return
+
+    def to_serializer(self, ip_aggregation):
+        ips_data = [{'key': bucket.key, 'doc_count': bucket.doc_count} for bucket in ip_aggregation]
+        return ips_data
+
+    def get(self, request, pk):
+        obj = self.get_object(pk)
+        if not obj:
+            return Response(data={"msg": "没有此域名信息"}, status=status.HTTP_404_NOT_FOUND)
+
+        # 调用es聚合查询所有ip的数量
+        aggre = Aggregation(index='visit', domain=obj.domain)
+        ips_aggregation_all = aggre.get_ip_aggregation()
+        ips_all = self.to_serializer(ips_aggregation_all)
+
+        # 查询过去5分钟内ip数量最多的前10个
+        ips_aggregation_min = aggre.get_10_ip_aggregation_min()
+        ips_min = self.to_serializer(ips_aggregation_min)
+
+        # 查询过去1小时内ip数量最多的前10个
+        ips_aggregation_hour = aggre.get_10_ip_aggregation_hour()
+        ips_hour = self.to_serializer(ips_aggregation_hour)
+
+        # 查询过去1天内ip数量最多的前10个
+        ips_aggregation_day = aggre.get_10_ip_aggregation_day()
+        ips_day = self.to_serializer(ips_aggregation_day)
+        print(ips_aggregation_day)
+
+        data = {
+            'ips_all': ips_all,
+            'ips_min': ips_min,
+            'ips_hour': ips_hour,
+            'ips_day': ips_day
+        }
+
+        return Response(data, status=status.HTTP_200_OK)

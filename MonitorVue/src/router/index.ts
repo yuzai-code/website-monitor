@@ -15,9 +15,14 @@ const router = createRouter({
       component: () => import('../views/WebsiteView.vue')
     },
     {
-      path: '/website/:id',
+      path: '/website/:id/:ip?',
       name: 'WebsiteDetail',
       component: () => import('../views/WebDetailView.vue')
+    },
+    {
+      path: '/ip_list',
+      name: 'IpList',
+      component: () => import('../views/IpListView.vue')
     }
   ]
 })
