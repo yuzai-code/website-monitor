@@ -42,6 +42,7 @@ import InputList from '@/components/InputList.vue'
 import ChartData from '@/components/ChartData.vue'
 import CardData from '@/components/CardData.vue'
 import axios from 'axios'
+import monent from 'moment'
 
 const dates = ref()
 const selectedWebSite = ref(null)
@@ -79,16 +80,17 @@ const submit_up = async () => {
 
 
 
-const setTodayAsDefaultDate = () => {
-  const today = new Date()
-  dates.value = [today, today]
-}
+// const setTodayAsDefaultDate = () => {
+//   const today = new Date()
+//   dates.value = [today, today]
+// }
 
 const defaultWebsite = { id: defaultWebsiteId, domain: 'us.rajabandot.top' }
 
 const setDefaultWebsiteId = () => {
   selectedWebSite.value = defaultWebsite // 设置默认网站对象，包含 id 和 domain
 }
+
 
 const submit = async () => {
   if (!selectedWebSite.value) {
@@ -97,7 +99,7 @@ const submit = async () => {
   }
   const data = {
     id: selectedWebSite.value.id,
-    dates: dates.value
+    dates: dates.value.map((date) => monent(date).format('YYYY-MM-DD'))
   }
   websiteId.value = selectedWebSite.value.id
   console.log('Data:', data)

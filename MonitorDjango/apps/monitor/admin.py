@@ -20,5 +20,5 @@ class VisitModelAdmin(admin.ModelAdmin):
     list_display = ['id', 'site', 'visit_time', 'remote_addr', 'user_agent', 'path', 'method', 'status_code',
                     'data_transfer', 'http_referer', 'malicious_request', 'http_x_forwarded_for', 'request_time']
     list_per_page = 50
-    list_filter = ['site', 'visit_time', 'remote_addr', 'method', 'status_code', 'malicious_request']
+    list_filter = ['site', 'visit_time', 'http_x_forwarded_for', 'method', 'status_code', 'malicious_request']
     search_fields = ['remote_addr', 'path', 'method', 'status_code']

@@ -26,6 +26,7 @@ import DialogService from 'primevue/dialogservice'
 import ToastService from 'primevue/toastservice'
 import FileUpload from 'primevue/fileupload'
 import InputText from 'primevue/inputtext'
+import Card from 'primevue/card'
 
 const app = createApp(App)
 
@@ -43,10 +44,11 @@ app.component('AutoComplete', AutoComplete)
 // eslint-disable-next-line vue/multi-word-component-names
 app.component('Avatar', Avatar)
 app.component('AvatarGroup', AvatarGroup)
-// eslint-disable-next-line vue/multi-word-component-names
+
 // eslint-disable-next-line vue/multi-word-component-names
 app.component('Button', Button)
 app.component('Calendar', Calendar)
+app.component('Card', Card)
 app.component('Column', Column)
 app.component('DataTable', DataTable)
 app.component('FileUpload', FileUpload)

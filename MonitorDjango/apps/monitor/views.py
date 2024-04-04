@@ -258,6 +258,7 @@ class WebsiteListAPIView(APIView):
         """根据日期范围过滤查询集"""
         if dates_range:
             start_date, end_date = dates_range
+
             print('222', queryset, start_date, end_date)
             queryset = queryset.filter(visitmodel__visit_time__range=(start_date, end_date))
             print('1111', queryset)
@@ -291,10 +292,10 @@ class WebsiteListAPIView(APIView):
 
     def post(self, request, *args, **kwargs):
         website_id = request.data.get('id', '')
-        dates = request.data.get('dates', [])
+        dates = request.data.get('dates')
         print(f'dates: {dates}, website_id: {website_id}')
         dates_range = self.get_dates_range(dates)
-        print(f'dates_range: {dates_range}')
+        # print(f'dates_range: {dates_range}')
         # 仅对有必要的记录进行查询，避免全表扫描
         queryset = WebsiteModel.objects.filter(id=website_id) if website_id else WebsiteModel.objects.all()
         queryset = self.filter_queryset_by_dates(queryset, dates_range)

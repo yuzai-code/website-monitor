@@ -35,14 +35,14 @@ const transformDataToChartData = (apiData) => {
     datasets: [
       {
         label: '访问量',
-        data: apiData.ip_total,
+        data: apiData.visit_total,
         fill: false,
         borderColor: '#42A5F5',
         tension: 0.1
       },
       {
         label: 'IP 数',
-        data: apiData.visit_total,
+        data: apiData.ip_total,
         fill: false,
         borderColor: '#FFA726',
         tension: 0.1
