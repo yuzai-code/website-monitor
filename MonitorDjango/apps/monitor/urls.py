@@ -25,6 +25,8 @@ urlpatterns = [
 
     path('website_list/', views.WebsiteListAPIView.as_view(), name='website_list'),
 
+    path('api/csrf_token/', views.csrf_token, name='csrf_token'),
+    path('api/upload/', views.LogUpload.as_view(), name='log_upload'),
     path('api/website_list/', views.WebsiteListAPIView.as_view(), name='website_list_api'),
     path('api/chart_data/', views.ChartDataAPIView.as_view(), name='chart_data_api'),
     path('api/website_detail/<int:pk>/', views.WebsiteDetailAPIView.as_view(), name='website_detail'),

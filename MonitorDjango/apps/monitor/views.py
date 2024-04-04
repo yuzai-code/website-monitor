@@ -10,6 +10,7 @@ from django.db.models import Count, Q, Avg, Sum, F
 from django.db.models.functions import TruncDay
 from django.forms import model_to_dict
 from django.http import JsonResponse
+from django.middleware.csrf import get_token
 from django.shortcuts import render, redirect
 from django.utils.dateparse import parse_date
 from django.views.generic import CreateView, DetailView, ListView
@@ -24,6 +25,12 @@ from .models import VisitModel, WebsiteModel, LogFileModel
 from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer
 
 pattern_string = r'(?P<remote_addr>\d+\.\d+\.\d+\.\d+) - - \[(?P<time_local>.+?)\] "(?P<method>\S+) (?P<path>\S+) (?P<protocol>HTTP\/\d\.\d)" (?P<status>\d{3}) (?P<body_bytes_sent>\d+) "(?P<http_referer>[^"]*)" "(?P<user_agent>[^"]+)"'
+
+
+def csrf_token(request):
+    csrf = get_token(request)
+    print('11111------------', csrf)
+    return JsonResponse({'csrfToken': csrf})
 
 
 def index(request):
@@ -54,7 +61,11 @@ class LogUpload(CreateView):
             file = self.request.FILES['upload_file']
             domain = self.request.POST.get('website', None)
             nginx_format = self.request.POST.get('nginx_log_format')
-            # print(f'file: {file}')
+            # print('sdasda')
+            # file = request.FILES.get('upload_file')
+            # domain = request.POST.get('website', '')
+            # nginx_format = request.POST.get('nginx_log_format', '')
+            print(f'file: {file}, domain:{domain},nginx_format:{nginx_format}')
             file_name = file.name
             if domain.strip() == '':
                 self.handle_uploaded_file(file, file_name, domain, nginx_format)
@@ -67,22 +78,25 @@ class LogUpload(CreateView):
 
     def generate_nginx_regex(self, nginx_format):
         try:
-            # Preprocess the nginx_format string to remove newlines and extra spaces
+            # 预处理nginx_format字符串以移除换行符和多余的空格
             nginx_format = nginx_format.replace('\n', ' ').replace('\r', '').replace('\t', ' ').replace("'", '')
             nginx_format = re.sub(r'\s+', ' ', nginx_format).strip()
 
             patterns = {
                 r'\$remote_addr': r'(?P<remote_addr>\\S+)',
                 r'\$remote_user': r'(?P<remote_user>\\S*)',
-                r'\$request_time': r'(?P<request_time>\\S+)',  # 确保这里是正确的变量名
+                r'\$request_time': r'(?P<request_time>\\S+)',
                 r'\[\$time_local\]': r"(?P<time_local>.*?)",
+                r'\$request_method': r'(?P<request_method>\\S+)',
+                r'\$scheme://\$host\$request_uri': r'(?P<request_uri>\\S+)',
                 r'\$request': r'(?P<request>.+?)',
+                r'\$server_protocol': r'(?P<server_protocol>.*?)',  # 修改这里的变量名，移除$
                 r'\$status': r'(?P<status>\\d{3})',
                 r'\$body_bytes_sent': r'(?P<body_bytes_sent>\\d+)',
                 r'\$http_referer': r'(?P<http_referer>.*?)',
                 r'\$http_user_agent': r'(?P<http_user_agent>.+?)',
                 r'\$http_x_forwarded_for': r'(?P<http_x_forwarded_for>.*?)',
-                r'\$upstream_response_time': r'(?P<upstream_response_time>\\S+)',  # 添加对 upstream_response_time 的处理
+                r'\$upstream_response_time': r'(?P<upstream_response_time>\\S+)',
             }
 
             for variable, pattern in patterns.items():
@@ -91,7 +105,7 @@ class LogUpload(CreateView):
             return nginx_format
         except Exception as e:
             logging.error(f'Failed to generate nginx regex: {e}')
-            return nginx_format
+            return None
 
     def handle_uploaded_file(self, file, file_name=None, domain=None, nginx_format=None):
         # 处理上传的nginx日志文件
@@ -164,18 +178,17 @@ class LogUpload(CreateView):
                         user_agent=log.get('http_user_agent', ''),
                         defaults={
                             # 'user_agent': log.get('http_user_agent', ''),
-                            'path': log.get('request').split()[1],
-                            'method': log.get('request').split()[0],
+                            'path': log.get('request_uri').split('//')[3:],
+                            'method': log.get('request_method'),
                             'status_code': log.get('status'),
                             'data_transfer': log.get('body_bytes_sent'),
                             'http_referer': log.get('http_referer'),
                             'malicious_request': False,
-                            'http_x_forwarded_for': log.get('http_x_forwarded_for'),
                             'request_time': log.get('request_time')
                         }
                     )
                 else:
-                    domain = log.get('request').split('/')[2]
+                    domain = log.get('request_uri').split('/')[2]
                     website, _ = WebsiteModel.objects.get_or_create(domain=domain)
                     logging.info(f'Parsed log line: {log}')
                     return VisitModel.objects.get_or_create(
@@ -185,8 +198,8 @@ class LogUpload(CreateView):
                         user_agent=log.get('http_user_agent', ''),
                         defaults={
                             # 'user_agent': log.get('http_user_agent', ''),
-                            'path': log.get('request').split()[1],
-                            'method': log.get('request').split()[0],
+                            'path': log.get('request_uri').split('//')[3:],
+                            'method': log.get('request_method'),
                             'status_code': log.get('status'),
                             'data_transfer': log.get('body_bytes_sent'),
                             'http_referer': log.get('http_referer'),

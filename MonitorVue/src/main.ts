@@ -24,9 +24,8 @@ import ConfirmationService from 'primevue/confirmationservice'
 import DataTable from 'primevue/datatable'
 import DialogService from 'primevue/dialogservice'
 import ToastService from 'primevue/toastservice'
-import FileUpload from 'primevue/fileupload';
-import InputText from 'primevue/inputtext';
-
+import FileUpload from 'primevue/fileupload'
+import InputText from 'primevue/inputtext'
 
 const app = createApp(App)
 
@@ -51,6 +50,6 @@ app.component('Calendar', Calendar)
 app.component('Column', Column)
 app.component('DataTable', DataTable)
 app.component('FileUpload', FileUpload)
-app.component('InputText',InputText)
+app.component('InputText', InputText)
 
 app.mount('#app')

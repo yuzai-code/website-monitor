@@ -10,22 +10,24 @@
       <Button label="查询" @click="submit" />
     </div>
 
- 
+
     <div class="upload-container">
       上传nginx日志文件:
       <div class="card-upload">
-        域名：
-        <InputText type="text" v-model="value" />
+        域名(选填)：
+        <InputText type="text" v-model="domain" />
       </div>
       <div class="card-upload">
-        日志格式：
-        <InputText type="text" v-model="value" />
+        日志格式(必填)：
+        <InputText type="text" v-model="logFormat" />
       </div>
       <div class="upload-button-container">
         <Toast />
-        <FileUpload mode="basic" name="demo[]" url="/api/upload" accept=".log,.txt,application/zip,application/x-tar"
-          :maxFileSize="1000000000" @upload="onUpload" />
+        <FileUpload mode="basic" ref="fileUpload" name="upload_file" url="/api/upload"
+          accept=".log,.txt,application/zip,application/x-tar" :maxFileSize="1000000000" @upload="onUpload" customUpload
+          :auto="false" />
       </div>
+      <Button label="上传" @click="submit_up" />
     </div>
 
     <CardData :websiteData="websiteData" />
@@ -46,6 +48,36 @@ const selectedWebSite = ref(null)
 const websiteData = ref([])
 const websiteId = ref(null)
 const defaultWebsiteId = 1905
+const domain = ref('')
+const logFormat = ref('')
+const fileUpload = ref(null)
+const csrfToken = ref('')
+
+
+const submit_up = async () => {
+  if (fileUpload.value?.files?.length > 0) {
+    const file = fileUpload.value.files[0];
+    let formData = new FormData();
+    formData.append('upload_file', file, file.name);
+    formData.append('website', domain.value);
+    formData.append('nginx_log_format', logFormat.value);
+
+    try {
+      const response = await axios.post('http://127.0.0.1:8000/api/upload/', formData,
+      );
+      console.log('上传成功:', response.data);
+      // 成功的Toast通知
+    } catch (error) {
+      console.error('上传失败:', error);
+      // 失败的Toast通知
+    }
+  } else {
+    console.log('没有文件被选中！');
+    // 提示需要选择文件
+  }
+};
+
+
 
 const setTodayAsDefaultDate = () => {
   const today = new Date()
@@ -78,10 +110,18 @@ const submit = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const response = await axios.get('http://127.0.0.1:8000/api/csrf_token/',);
+    console.log('CSRF 令牌:', response);
+    csrfToken.value = response.data.csrfToken;
+  } catch (error) {
+    console.error('获取 CSRF 令牌失败:', error);
+  }
   setTodayAsDefaultDate() // 设置默认日期
   setDefaultWebsiteId() // 设置默认网站ID
   submit() // 执行查询
+
 })
 </script>
 
