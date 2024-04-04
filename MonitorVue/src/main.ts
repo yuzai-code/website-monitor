@@ -9,6 +9,7 @@ import 'primeflex/primeflex.css'
 import 'primevue/resources/themes/aura-light-green/theme.css'
 import 'primevue/resources/primevue.min.css' /* Deprecated */
 import 'primeicons/primeicons.css'
+import Ripple from 'primevue/ripple'
 // import './style.css'
 // import './flags.css'
 
@@ -53,5 +54,7 @@ app.component('Column', Column)
 app.component('DataTable', DataTable)
 app.component('FileUpload', FileUpload)
 app.component('InputText', InputText)
+
+app.directive('ripple', Ripple)
 
 app.mount('#app')
