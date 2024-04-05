@@ -27,7 +27,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -45,6 +44,8 @@ INSTALLED_APPS = [
     'redis',
     'rest_framework',
     'django_elasticsearch_dsl',
+    'user',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -233,9 +234,15 @@ LOGGING = {
     },
 }
 
-
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Vue开发服务器的地址
     "http://127.0.0.1:5173",
 ]
 CORS_ALLOW_HEADERS = ('*')
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+}
+

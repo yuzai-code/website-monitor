@@ -60,7 +60,6 @@ class TotalIPVisit:
         ]
         self.included_user_agents = "compatible; Googlebot/2.1; +http://www.google.com/bot.html",
 
-
     def total_visit(self):
         """
         统计过去两周内，排除特定用户代理后的每日访问量。
@@ -148,6 +147,9 @@ class TotalIPVisit:
 
         # 使用match_phrase查询匹配包含"Googlebot"的用户代理字符串
         s = s.query('bool', must=[Q("match_phrase", user_agent="Googlebot")])
+
+        # 使用match查询对http_referer进行模糊匹配
+        s = s.query('bool', must=[Q('match', http_referer='https://www.google.com/')])
 
         # 定义日期直方图聚合，以visit_time字段进行按天聚合
         s.aggs.bucket(

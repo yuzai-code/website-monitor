@@ -15,22 +15,9 @@ Including another URLconf
 """
 from django.urls import path
 from . import views
+from rest_framework.authtoken.views import obtain_auth_token
 
 urlpatterns = [
-    path('index/', views.index, name='index'),
-    path('nginx_logs/', views.nginx_logs, name='nginx_logs'),
-    path('website_stats/', views.website_stats, name='website_stats'),
-
-    path('upload/', views.LogUpload.as_view(), name='log_upload'),
-
-    path('website_list/', views.WebsiteListAPIView.as_view(), name='website_list'),
-
-    path('api/csrf_token/', views.csrf_token, name='csrf_token'),
-    path('api/upload/', views.LogUpload.as_view(), name='log_upload'),
-    path('api/website_list/', views.WebsiteListAPIView.as_view(), name='website_list_api'),
-    path('api/chart_data/', views.ChartDataAPIView.as_view(), name='chart_data_api'),
-    path('api/website_detail/<int:pk>/', views.WebsiteDetailAPIView.as_view(), name='website_detail'),
-    path('api/ip_list/<int:pk>/', views.IpListAPIView.as_view(), name='ip_list'),
-    path('api/spider/<int:pk>/', views.SpiderAPIView.as_view(), name='spider'),
-    path('api/total/', views.TotalIpVisit.as_view(), name='total')
+    path('register/', views.UserCreate.as_view(), name='register'),
+    path('login/', obtain_auth_token, name='login'),
 ]
