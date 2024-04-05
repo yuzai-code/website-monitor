@@ -57,11 +57,10 @@
               </a>
             </li>
             <li>
-              <a v-ripple
-                class="flex align-items-center cursor-pointer p-3 border-round text-700 hover:surface-100 transition-duration-150 transition-colors p-ripple">
+              <router-link to="/total" class="flex align-items-center cursor-pointer p-3 border-round text-700
+                hover:surface-100 transition-duration-150 transition-colors p-ripple">
                 <i class="pi pi-folder mr-2"></i>
-                <span class="font-medium">Projects</span>
-              </a>
+                <span class="font-medium">汇总</span></router-link>
             </li>
             <li>
               <a v-ripple

@@ -5,6 +5,7 @@ from monitor.models import WebsiteModel, VisitModel
 
 class VisitSerializer(serializers.ModelSerializer):
     visit_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
+
     class Meta:
         model = VisitModel
         fields = ['id', 'site', 'visit_time', 'remote_addr', 'user_agent',
@@ -42,7 +43,7 @@ class MonitorSerializer(serializers.ModelSerializer):
     class Meta:
         model = WebsiteModel
         fields = ['id', 'domain', 'site_name', 'deploy_status', 'data_transfer_total', 'visit_total',
-                  'visitor_total','ip_total',
+                  'visitor_total', 'ip_total',
                   'error_total', 'malicious_request_total', 'request_per_second',
                   'visits'
                   ]

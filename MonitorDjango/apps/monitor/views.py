@@ -20,7 +20,7 @@ from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .es import Aggregation
+from .es import Aggregation, SpiderAggregation, TotalIPVisit
 from .forms import LogFileForm
 from .models import VisitModel, WebsiteModel, LogFileModel
 from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer
@@ -217,10 +217,10 @@ class LogUpload(CreateView):
                         user_agent=log.get('http_user_agent', ''),
                         defaults={
                             # 'user_agent': log.get('http_user_agent', ''),
-                            'path': log.get('request_uri'),
-                            'method': log.get('request_method'),
+                            'path': path,
+                            'method': method,
                             'status_code': log.get('status'),
-                            'HTTP_protocol': log.get(HTTP_protocol),
+                            'HTTP_protocol': HTTP_protocol,
                             'data_transfer': log.get('body_bytes_sent'),
                             'http_referer': log.get('http_referer'),
                             'malicious_request': False,
@@ -453,3 +453,53 @@ class SpiderAPIView(APIView):
     """
     爬虫的统计
     """
+
+    @staticmethod
+    def get_object(pk):
+        try:
+            website = WebsiteModel.objects.get(pk=pk)
+            return website
+        except VisitModel.DoesNotExist:
+            return
+
+    def get(self, request, pk, *args, **kwargs):
+        website = self.get_object(pk=pk)
+        spider_aggregation = SpiderAggregation(index='visit', domain=website.domain)
+        get_spider_aggregatio = spider_aggregation.get_spider_aggregation()
+        print(get_spider_aggregatio)
+        return Response(list(get_spider_aggregatio), status=status.HTTP_200_OK)
+
+
+class TotalIpVisit(APIView):
+    """
+    统计所有的ip和访问量
+    """
+
+    def to_serailizer(self, es_data):
+        date = []
+        count = []
+        for bucket in es_data:
+            date_str = bucket.key_as_string
+            date_obj = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+            formatted_date = date_obj.strftime("%Y-%m-%d")
+            date.append(formatted_date)
+            count.append(bucket.doc_count)
+
+        return date, count
+
+    def get(self, request):
+        total = TotalIPVisit(index='visit')
+        visit_date, visit_count = self.to_serailizer(total.total_visit())
+        es_ips = total.total_ip()
+        ip_count = [bucket.unique_ips.value for bucket in es_ips]
+        es_google_ips = total.google_ip()
+        google_ips = [bucket.doc_count for bucket in es_google_ips]
+
+        # print(visit_count, ip_count, google_ips)
+        data = {
+            'date': visit_date,
+            'visit_count': visit_count,
+            'ip_count': ip_count,
+            'google_ips': google_ips,
+        }
+        return Response(data, status=status.HTTP_200_OK)

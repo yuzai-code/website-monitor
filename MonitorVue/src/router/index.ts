@@ -28,6 +28,11 @@ const router = createRouter({
       path: '/spider',
       name: 'Spider',
       component: () => import('../views/SpiderView.vue')
+    },
+    {
+      path: '/total',
+      name: 'Total',
+      component: () => import('../views/TotalView.vue')
     }
   ]
 })
