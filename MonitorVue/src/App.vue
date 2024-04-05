@@ -36,11 +36,11 @@
               </router-link>
             </li>
             <li>
-              <a v-ripple
+              <router-link to="/spider"
                 class="flex align-items-center cursor-pointer p-3 border-round text-700 hover:surface-100 transition-duration-150 transition-colors p-ripple">
                 <i class="pi pi-comments mr-2"></i>
                 <span class="font-medium">蜘蛛统计</span>
-              </a>
+              </router-link>
             </li>
             <li>
               <a v-ripple

@@ -169,6 +169,13 @@ class LogUpload(CreateView):
                 time_data = visit_time.strip('[]')
                 # 转换成YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ]日期格式
                 visit_time = datetime.strptime(time_data, '%d/%b/%Y:%H:%M:%S %z')
+
+                # 处理remote_addr
+                if log.get('remote_addr'):
+                    remote_addr = log.get('http_x_forwarded_for')
+                else:
+                    remote_addr = log.get('remote_addr')
+
                 # 判断并处理路径
                 if log.get('request'):
                     parts = log.get('request').split(' ', 2)
@@ -185,14 +192,14 @@ class LogUpload(CreateView):
                     return VisitModel.objects.get_or_create(
                         site=website,
                         visit_time=visit_time,
-                        remote_addr=log.get('remote_addr'),
+                        remote_addr=remote_addr,
                         user_agent=log.get('http_user_agent', ''),
                         defaults={
                             # 'user_agent': log.get('http_user_agent', ''),
                             'path': path,
                             'method': method,
                             'status_code': log.get('status'),
-                            'HTTP_protocol':log.get(HTTP_protocol),
+                            'HTTP_protocol': log.get(HTTP_protocol),
                             'data_transfer': log.get('body_bytes_sent'),
                             'http_referer': log.get('http_referer'),
                             'malicious_request': False,
@@ -206,7 +213,7 @@ class LogUpload(CreateView):
                     return VisitModel.objects.get_or_create(
                         site=website,
                         visit_time=visit_time,
-                        remote_addr=log.get('remote_addr'),
+                        remote_addr=remote_addr,
                         user_agent=log.get('http_user_agent', ''),
                         defaults={
                             # 'user_agent': log.get('http_user_agent', ''),
@@ -217,7 +224,7 @@ class LogUpload(CreateView):
                             'data_transfer': log.get('body_bytes_sent'),
                             'http_referer': log.get('http_referer'),
                             'malicious_request': False,
-                            'http_x_forwarded_for': log.get('http_x_forwarded_for'),
+                            'http_x_forwarded_for': remote_addr,
                             'request_time': log.get('request_time')
                         }
                     )
@@ -311,14 +318,14 @@ class WebsiteListAPIView(APIView):
         # 仅对有必要的记录进行查询，避免全表扫描
         queryset = WebsiteModel.objects.filter(id=website_id) if website_id else WebsiteModel.objects.all()
         queryset = self.filter_queryset_by_dates(queryset, dates_range)
-        # 对 visitmodel__http_x_forwarded_for 进行去重计数以获得 IP 总数
-        ip_totals = queryset.annotate(distinct_ip=Count('visitmodel__http_x_forwarded_for', distinct=True))
+        # 对 visitmodel__remote_addrr 进行去重计数以获得 IP 总数
+        ip_totals = queryset.annotate(distinct_ip=Count('visitmodel__remote_addr', distinct=True))
 
         # 对整个查询集进行计数以获得访问总数
         visit_totals = queryset.annotate(total_visits=Count('visitmodel'))
 
-        # 对 visitmodel__http_x_forwarded_for 和 visitmodel__user_agent 的组合进行去重以获得唯一访客数
-        visitor_totals = queryset.values('visitmodel__http_x_forwarded_for',
+        # 对 visitmodel__remote_addr 和 visitmodel__user_agent 的组合进行去重以获得唯一访客数
+        visitor_totals = queryset.values('visitmodel__remote_addr',
                                          'visitmodel__user_agent').distinct().count()
 
         # 直接计算数据传输总量
@@ -370,7 +377,7 @@ class ChartDataAPIView(APIView):
         # 按天分组，同时统计访问量和独立IP数量
         stats_per_day = queryset.annotate(day=TruncDay('visit_time')) \
             .values('day') \
-            .annotate(visit_total=Count('id'), ip_total=Count('http_x_forwarded_for', distinct=True)) \
+            .annotate(visit_total=Count('id'), ip_total=Count('remote_addr', distinct=True)) \
             .order_by('day')
 
         # 将查询结果转换为字典以便快速访问
@@ -440,3 +447,9 @@ class IpListAPIView(APIView):
         }
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class SpiderAPIView(APIView):
+    """
+    爬虫的统计
+    """

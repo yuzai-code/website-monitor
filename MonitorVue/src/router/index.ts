@@ -23,6 +23,11 @@ const router = createRouter({
       path: '/ip_list',
       name: 'IpList',
       component: () => import('../views/IpListView.vue')
+    },
+    {
+      path: '/spider',
+      name: 'Spider',
+      component: () => import('../views/SpiderView.vue')
     }
   ]
 })

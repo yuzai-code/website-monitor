@@ -1,7 +1,7 @@
 <template>
     <div class="card p-fluid">
-        <DataTable v-model:filters="filters" :value="WebsiteDetail.visits" editMode="cell"
-            @cell-edit-complete="onCellEditComplete" filterDisplay="row" paginator :rows="10">
+        <DataTable v-model:filters="filters" :value="WebsiteDetail.visits" editMode="cell" filterDisplay="row" paginator
+            :rows="10">
             <Column field="remote_addr" header="Remote Address" :sortable="true" :filter="true">
                 <template #filter="{ filterModel, filterCallback }">
                     <InputText v-model="filterModel.value" @keydown.enter="filterCallback" class="p-column-filter"
@@ -17,8 +17,8 @@
                 </template>
             </Column>
 
-            <!-- 为 http_x_forwarded_for 使用 InputText 作为筛选器 -->
-            <Column field="http_x_forwarded_for" header="http_x_forwarded_for" :filter="true">
+            <!-- 为 http_referer 使用 InputText 作为筛选器 -->
+            <Column field="http_referer" header="http_referer" :filter="true">
                 <template #filter="{ filterModel, filterCallback }">
                     <InputText v-model="filterModel.value" @keydown.enter="filterCallback" class="p-column-filter"
                         placeholder="" />
@@ -110,7 +110,7 @@ const methods = ref([
 const columns = ref([
     { field: 'remote_addr', header: 'Remote Address', sortable: true, filter: true },
     { field: 'request_time', header: 'Request Time', sortable: true, filter: true },
-    { field: 'http_x_forwarded_for', header: 'http_x_forwarded_for', sortable: true, filter: true },
+    { field: 'http_referer', header: 'http_referer', sortable: true, filter: true },
     { field: 'user_agent', header: 'User Agent' },
     { field: 'path', header: 'path' },
     { field: 'data_transfer', header: 'Data Transfer', sortable: true },
@@ -122,7 +122,7 @@ const columns = ref([
 const filters = ref({
     'remote_addr': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     'request_time': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    'http_x_forwarded_for': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    'http_referer': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     'user_agent': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     'path': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     'visit_time': { value: null, matchMode: FilterMatchMode.DATE_IS },
@@ -135,7 +135,7 @@ const filters = ref({
 //  监听ip的变化
 watch(() => props.ip, (newIp) => {
     if (newIp) {
-        filters.value['http_x_forwarded_for'].value = newIp;
+        filters.value['remote_addr'].value = newIp;
     }
 }, { immediate: true });
 
