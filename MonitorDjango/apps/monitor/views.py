@@ -75,7 +75,7 @@ class LogUpload(CreateView):
             return JsonResponse({'message': '文件上传成功'}, status=200)
         except Exception as e:
             # 表单验证  失败的情况
-            return JsonResponse({'errors': e}, status=400)
+            return JsonResponse({'message': '文件上传失败'}, status=404)
 
     def generate_nginx_regex(self, nginx_format):
         try:
@@ -106,7 +106,7 @@ class LogUpload(CreateView):
             return nginx_format
         except Exception as e:
             logging.error(f'Failed to generate nginx regex: {e}')
-            return None
+            return Response()
 
     def handle_uploaded_file(self, file, file_name=None, domain=None, nginx_format=None):
         # 处理上传的nginx日志文件
@@ -169,6 +169,16 @@ class LogUpload(CreateView):
                 time_data = visit_time.strip('[]')
                 # 转换成YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ]日期格式
                 visit_time = datetime.strptime(time_data, '%d/%b/%Y:%H:%M:%S %z')
+                # 判断并处理路径
+                if log.get('request'):
+                    parts = log.get('request').split(' ', 2)
+                    method = parts[0]
+                    path = parts[1]
+                    HTTP_protocol = parts[2]
+                else:
+                    method = log.get('request_method'),
+                    path = log.get('request_uri'),
+                    HTTP_protocol = log.get('server_protocol')
                 if website:
                     # print(f'visit_time: {visit_time}')
                     logging.info(f'Parsed log line: {log}')
@@ -179,9 +189,10 @@ class LogUpload(CreateView):
                         user_agent=log.get('http_user_agent', ''),
                         defaults={
                             # 'user_agent': log.get('http_user_agent', ''),
-                            'path': log.get('request_uri'),
-                            'method': log.get('request_method'),
+                            'path': path,
+                            'method': method,
                             'status_code': log.get('status'),
+                            'HTTP_protocol':log.get(HTTP_protocol),
                             'data_transfer': log.get('body_bytes_sent'),
                             'http_referer': log.get('http_referer'),
                             'malicious_request': False,
@@ -202,6 +213,7 @@ class LogUpload(CreateView):
                             'path': log.get('request_uri'),
                             'method': log.get('request_method'),
                             'status_code': log.get('status'),
+                            'HTTP_protocol': log.get(HTTP_protocol),
                             'data_transfer': log.get('body_bytes_sent'),
                             'http_referer': log.get('http_referer'),
                             'malicious_request': False,

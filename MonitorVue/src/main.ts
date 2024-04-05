@@ -30,6 +30,7 @@ import InputText from 'primevue/inputtext'
 import Card from 'primevue/card'
 import ColumnGroup from 'primevue/columngroup' // optional
 import Row from 'primevue/row' // optional
+import Toast from 'primevue/toast'
 
 const app = createApp(App)
 
@@ -41,6 +42,7 @@ app.use(router)
 
 // app.component('Button', Button)
 // eslint-disable-next-line vue/multi-word-component-names
+app.component('Toast', Toast)
 app.component('Accordion', Accordion)
 app.component('ColumnGroup', ColumnGroup)
 app.component('Row', Row)

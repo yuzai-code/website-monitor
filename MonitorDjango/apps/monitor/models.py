@@ -64,10 +64,12 @@ class VisitModel(BaseModel):
     path = models.CharField(max_length=1000, verbose_name='访问路径', blank=True, null=True)
     method = models.CharField(max_length=100, verbose_name='请求方法', blank=True, null=True, db_index=True)
     status_code = models.IntegerField(verbose_name='HTTP状态码', db_index=True)
+    HTTP_protocol = models.CharField(verbose_name="HTTP协议", max_length=20, blank=True, null=True)
     data_transfer = models.BigIntegerField(verbose_name='数据传输总量')
     http_referer = models.CharField(max_length=255, verbose_name='HTTP_REFERER', blank=True, null=True)
     malicious_request = models.BooleanField(default=False, verbose_name='是否恶意请求', db_index=True)
-    http_x_forwarded_for = models.CharField(max_length=100, verbose_name='实际的客户端IP', blank=True, null=True,db_index=True)
+    http_x_forwarded_for = models.CharField(max_length=100, verbose_name='实际的客户端IP', blank=True, null=True,
+                                            db_index=True)
     request_time = models.FloatField(verbose_name='请求时间', blank=True, null=True)
 
     class Meta:

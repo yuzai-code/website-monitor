@@ -19,12 +19,15 @@
       </div>
       <div class="card-upload">
         日志格式(必填)：
-        <InputText type="text" v-model="logFormat" />
+        <InputText type="text" v-model="logFormat" list="logFormat-history" />
+        <datalist id="logFormat-history">
+          <option v-for="item in history" :value="item" :key="item"></option>
+        </datalist>
       </div>
       <div class="upload-button-container">
         <Toast />
         <FileUpload mode="basic" ref="fileUpload" name="upload_file" url="/api/upload"
-          accept=".log,.txt,application/zip,application/x-tar" :maxFileSize="1000000000" customUpload :auto="false" />
+          accept=".log,application/gzip,.gz" :maxFileSize="1000000000" customUpload :auto="false" />
       </div>
       <Button label="上传" @click="submit_up" />
     </div>
@@ -42,8 +45,10 @@ import ChartData from '@/components/ChartData.vue'
 import CardData from '@/components/CardData.vue'
 import axios from 'axios'
 import moment from 'moment';
+import { useToast } from 'primevue/usetoast';
 
 
+const toast = useToast();
 const dates = ref()
 const selectedWebSite = ref(null)
 const websiteData = ref({
@@ -58,6 +63,7 @@ const domain = ref('')
 const logFormat = ref('')
 const fileUpload = ref(null)
 const csrfToken = ref('')
+const history = ref([])  // 历史记录
 
 
 const submit_up = async () => {
@@ -71,15 +77,28 @@ const submit_up = async () => {
     try {
       const response = await axios.post('http://127.0.0.1:8000/api/upload/', formData,
       );
-      console.log('上传成功:', response.data);
+
+
+      // 保存域名到历史记录
+      if (logFormat.value) {
+        let logFormatHistory = JSON.parse(localStorage.getItem('logFormatHistory') || '[]');
+        if (!logFormatHistory.includes(logFormat.value)) {
+          logFormatHistory.push(logFormat.value);
+          localStorage.setItem('logFormatHistory', JSON.stringify(logFormatHistory));
+        }
+      }
       // 成功的Toast通知
+      // console.log('上传成功:', response.data);
+      toast.add({ severity: 'success', summary: '上传成功', detail: '文件已成功上传', life: 3000 });
     } catch (error) {
-      console.error('上传失败:', error);
+      // console.error('上传失败:', error);
+      toast.add({ severity: 'error', summary: '上传失败', detail: '文件上传失败，请重试', life: 3000 });
+
       // 失败的Toast通知
     }
   } else {
     console.log('没有文件被选中！');
-    // 提示需要选择文件
+    toast.add({ severity: 'warn', summary: '无文件', detail: '请先选择一个文件', life: 3000 });
   }
 };
 
@@ -128,7 +147,9 @@ onMounted(async () => {
   setTodayAsDefaultDate() // 设置默认日期
   setDefaultWebsiteId() // 设置默认网站ID
   submit() // 执行查询
-
+  // 加载域名历史记录
+  let logFormatHistory = JSON.parse(localStorage.getItem('logFormatHistory') || '[]');
+  history.value = logFormatHistory;
 })
 </script>
 
