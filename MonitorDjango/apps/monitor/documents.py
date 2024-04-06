@@ -6,6 +6,8 @@ from monitor.models import VisitModel, WebsiteModel
 
 @registry.register_document
 class WebsiteDocument(Document):
+    user_id = fields.IntegerField(attr='user.id')
+
     class Index:
         name = 'website'
         settings = {
@@ -39,6 +41,7 @@ class VisitDocument(Document):
     )
     remote_addr = fields.KeywordField()
     http_x_forwarded_for = fields.KeywordField()
+    user_id = fields.IntegerField(attr='user.id')
 
     class Index:
         name = 'visit'

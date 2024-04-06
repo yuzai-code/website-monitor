@@ -13,7 +13,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import axiosInstance from '@/axiosConfig.ts'
 import { useRoute } from 'vue-router'
 import Card from 'primevue/card';          // optional
 import FilterDisplay from '@/components/FilterDisplay.vue'; // optional
@@ -25,8 +25,16 @@ const WebsiteDetail = ref([])
 
 const fetchData = async () => {
   const websiteId = route.params.id
+  // 获取存储的Token
+  const token = localStorage.getItem('authToken');
   try {
-    const response = await axios.get('http://127.0.0.1:8000/api/website_detail/' + websiteId + '/')
+    const response = await axiosInstance.get('http://127.0.0.1:8000/api/website_detail/' + websiteId + '/', {
+      headers: {
+        // 添加Token到请求头
+        'Authorization': `Token ${token}`
+      }
+
+    })
     console.log('Website detail:', response.data)
     WebsiteDetail.value = response.data
   } catch (error) {

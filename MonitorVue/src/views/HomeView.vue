@@ -23,6 +23,7 @@
         <datalist id="logFormat-history">
           <option v-for="item in history" :value="item" :key="item"></option>
         </datalist>
+        <Button label="清空历史" @click="clearHistory" />
       </div>
       <div class="upload-button-container">
         <Toast />
@@ -43,7 +44,7 @@ import { onMounted, ref } from 'vue'
 import InputList from '@/components/InputList.vue'
 import ChartData from '@/components/ChartData.vue'
 import CardData from '@/components/CardData.vue'
-import axios from 'axios'
+import axiosInstance from '@/axiosConfig.ts'
 import moment from 'moment';
 import { useToast } from 'primevue/usetoast';
 
@@ -74,10 +75,9 @@ const submit_up = async () => {
     formData.append('website', domain.value);
     formData.append('nginx_log_format', logFormat.value);
 
-    try {
-      const response = await axios.post('http://127.0.0.1:8000/api/upload/', formData,
-      );
 
+    try {
+      const response = await axiosInstance.post('http://127.0.0.1:8000/api/upload/', formData);
 
       // 保存域名到历史记录
       if (logFormat.value) {
@@ -128,7 +128,7 @@ const submit = async () => {
   websiteId.value = selectedWebSite.value.id
   console.log('Data:', data)
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/website_list/', data)
+    const response = await axiosInstance.post('http://127.0.0.1:8000/api/website_list/', data)
     console.log('Response:', response.data)
     websiteData.value = response.data
   } catch (error) {
@@ -136,9 +136,16 @@ const submit = async () => {
   }
 }
 
+function clearHistory() {
+  // 清空localStorage中的历史记录
+  localStorage.removeItem('logFormatHistory');
+  // 更新绑定到datalist的数据
+  history.value = [];
+}
+
 onMounted(async () => {
   try {
-    const response = await axios.get('http://127.0.0.1:8000/api/csrf_token/',);
+    const response = await axiosInstance.get('http://127.0.0.1:8000/api/csrf_token/',);
     console.log('CSRF 令牌:', response);
     csrfToken.value = response.data.csrfToken;
   } catch (error) {
@@ -161,8 +168,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   /* 垂直居中 */
-  justify-content: space-around;
-  /* 在主轴上平均分布 */
   padding: 20px;
   gap: 20px;
   /* 组件之间的间隙 */

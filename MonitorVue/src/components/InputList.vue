@@ -5,7 +5,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, defineEmits } from 'vue'
-import axios from 'axios'
+import axiosInstance from '@/axiosConfig.ts'
 
 const website = ref([])
 const selectedItem = ref(null)
@@ -29,7 +29,7 @@ onMounted(async () => {
   }
 
   try {
-    const response = await axios.get('http://127.0.0.1:8000/api/website_list');
+    const response = await axiosInstance.get('http://127.0.0.1:8000/api/website_list');
     website.value = response.data;
     // 更新 filteredWebsites 以反映可能从 sessionStorage 恢复的选中项
     filteredWebsites.value = [...website.value];

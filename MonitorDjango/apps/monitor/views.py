@@ -4,6 +4,7 @@ import gzip
 import tempfile
 from datetime import datetime, timedelta
 
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models import Count, Q, Avg, Sum, F
@@ -17,6 +18,7 @@ from django.views.generic import CreateView, DetailView, ListView
 from pygrok import pygrok
 from rest_framework import status
 from rest_framework.generics import RetrieveAPIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -48,13 +50,11 @@ def nginx_logs(request):
     return render(request, 'nginx_logs.html', context)
 
 
-class LogUpload(CreateView):
+class LogUpload(APIView):
     """
     上传日志文件
     """
-    model = LogFileModel
-    form_class = LogFileForm
-    template_name = 'logs/upload.html'
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         # print('111')
@@ -75,6 +75,7 @@ class LogUpload(CreateView):
             return JsonResponse({'message': '文件上传成功'}, status=200)
         except Exception as e:
             # 表单验证  失败的情况
+            print('error',e)
             return JsonResponse({'message': '文件上传失败'}, status=404)
 
     def generate_nginx_regex(self, nginx_format):
@@ -109,6 +110,7 @@ class LogUpload(CreateView):
             return Response()
 
     def handle_uploaded_file(self, file, file_name=None, domain=None, nginx_format=None):
+        user = self.request.user
         # 处理上传的nginx日志文件
         if file_name and file_name.endswith('.gz'):
             # 使用TemporaryFile或者BytesIO临时保存上传的文件
@@ -121,12 +123,12 @@ class LogUpload(CreateView):
                 # 使用gzip打开临时文件
                 with gzip.open(tmp, 'rt', encoding='utf-8') as gz_file:
                     # 确保在这里重新定位到文件开始，如果你要在process_log_file中再次读取
-                    self.process_log_file(gz_file, domain, nginx_format)
+                    self.process_log_file(gz_file, domain, nginx_format, user=user)
         else:
             # 如果文件不是压缩文件，则直接处理
-            self.process_log_file(file, domain, nginx_format)
+            self.process_log_file(file, domain, nginx_format, user=user)
 
-    def process_log_file(self, file, domain, nginx_format):
+    def process_log_file(self, file, domain, nginx_format, user=None):
         # 处理日志文件
         if domain.strip() == '':  # 如果domain为空，就从文件中的request获取
             for line in file:
@@ -137,15 +139,15 @@ class LogUpload(CreateView):
             return None
 
         # 获取站点信息，如果站点不存在则创建
-        website, _ = WebsiteModel.objects.get_or_create(domain=domain)
+        website, _ = WebsiteModel.objects.get_or_create(domain=domain, user=user)
         for line in file:
             # print(f'line: {line}')
             if line.strip():
                 if isinstance(line, bytes):
                     line = line.decode('utf-8')
-                self.parse_nginx_log(line, website, nginx_format)
+                self.parse_nginx_log(line, website, nginx_format, user=user)
 
-    def parse_nginx_log(self, line, website, nginx_format):
+    def parse_nginx_log(self, line, website, nginx_format, user=None):
 
         try:
             # 使用pygrok解析日志
@@ -171,7 +173,7 @@ class LogUpload(CreateView):
                 visit_time = datetime.strptime(time_data, '%d/%b/%Y:%H:%M:%S %z')
 
                 # 处理remote_addr
-                if log.get('remote_addr'):
+                if log.get('http_x_forwarded_for'):
                     remote_addr = log.get('http_x_forwarded_for')
                 else:
                     remote_addr = log.get('remote_addr')
@@ -191,6 +193,7 @@ class LogUpload(CreateView):
                     logging.info(f'Parsed log line: {log}')
                     return VisitModel.objects.get_or_create(
                         site=website,
+                        user=user,
                         visit_time=visit_time,
                         remote_addr=remote_addr,
                         user_agent=log.get('http_user_agent', ''),
@@ -212,6 +215,7 @@ class LogUpload(CreateView):
                     logging.info(f'Parsed log line: {log}')
                     return VisitModel.objects.get_or_create(
                         site=website,
+                        user=user,
                         visit_time=visit_time,
                         remote_addr=remote_addr,
                         user_agent=log.get('http_user_agent', ''),
@@ -233,32 +237,30 @@ class LogUpload(CreateView):
             return None
 
 
-def website_stats(request):
-    website = request.GET.get('website')
-    if website:
-        try:
-            data = WebsiteModel.objects.get(domain=website)
-            data_dict = {
-                'ip_total': data.ip_total,
-                'visit_total': data.visit_total,
-                'data_transfer_total': data.data_transfer_total,
-                'visitor_total': data.visitor_total,
-            }
-            return render(request, 'website_stats.html', {'data': data_dict})
-        except ObjectDoesNotExist:
-            return JsonResponse({'message': '站点不存在'}, status=400)
-    else:
-        return render(request, 'website_stats.html')
-
+# def website_stats(request):
+#     website = request.GET.get('website')
+#     if website:
+#         try:
+#             data = WebsiteModel.objects.get(domain=website)
+#             data_dict = {
+#                 'ip_total': data.ip_total,
+#                 'visit_total': data.visit_total,
+#                 'data_transfer_total': data.data_transfer_total,
+#                 'visitor_total': data.visitor_total,
+#             }
+#             return render(request, 'website_stats.html', {'data': data_dict})
+#         except ObjectDoesNotExist:
+#             return JsonResponse({'message': '站点不存在'}, status=400)
+#     else:
+#         return render(request, 'website_stats.html')
+#
 
 # class WebsiteListView(ListView):
 class WebsiteListAPIView(APIView):
     """
     获取站点列表
     """
-    model = WebsiteModel
-    template_name = 'website_list.html'
-    context_object_name = 'websites'
+    permission_classes = [IsAuthenticated]
 
     def get_dates_range(self, dates):
         """根据传入的日期列表计算查询范围"""
@@ -285,7 +287,9 @@ class WebsiteListAPIView(APIView):
         return queryset
 
     def get(self, request, *args, **kwargs):
-        queryset = WebsiteModel.objects.all()
+        print("当前用户：", request.user.id)
+        queryset = WebsiteModel.objects.filter(user_id=request.user.id)
+        print(queryset)
         need_nested = request.query_params.get('need_nested', 'false').lower() in ['true', '1', 'yes']
         search_text = request.query_params.get('search', '')
         if search_text:
@@ -316,7 +320,9 @@ class WebsiteListAPIView(APIView):
         dates_range = self.get_dates_range(dates)
         # print(f'dates_range: {dates_range}')
         # 仅对有必要的记录进行查询，避免全表扫描
-        queryset = WebsiteModel.objects.filter(id=website_id) if website_id else WebsiteModel.objects.all()
+        queryset = WebsiteModel.objects.filter(id=website_id,
+                                               user=self.request.user) if website_id else WebsiteModel.objects.filter(
+            user=self.request.user)
         queryset = self.filter_queryset_by_dates(queryset, dates_range)
         # 对 visitmodel__remote_addrr 进行去重计数以获得 IP 总数
         ip_totals = queryset.annotate(distinct_ip=Count('visitmodel__remote_addr', distinct=True))
@@ -346,8 +352,12 @@ class WebsiteListAPIView(APIView):
 
 
 class WebsiteDetailAPIView(RetrieveAPIView):
-    queryset = WebsiteModel.objects.all()
+    permission_classes = [IsAuthenticated]
     serializer_class = MonitorSerializer
+
+    def get_queryset(self):
+        """只返回当前用户的数据"""
+        return WebsiteModel.objects.filter(user=self.request.user)
 
     def get_serializer_context(self):
         context = super(WebsiteDetailAPIView, self).get_serializer_context()
@@ -359,6 +369,7 @@ class ChartDataAPIView(APIView):
     """
     获取图表数据
     """
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         website_id = request.GET.get('id', '')
@@ -366,7 +377,7 @@ class ChartDataAPIView(APIView):
         start_date = end_date - timedelta(days=6)  # 包括今天在内的过去7天
 
         # 确保website_id对应的WebsiteModel存在
-        if website_id and not WebsiteModel.objects.filter(id=website_id).exists():
+        if website_id and not WebsiteModel.objects.filter(id=website_id, user=self.request.user).exists():
             return Response({'error': 'Website not found'}, status=404)
 
         # 构建基础查询集
@@ -404,10 +415,12 @@ class ChartDataAPIView(APIView):
 
 
 class IpListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
     @staticmethod
-    def get_object(pk):
+    def get_object(pk, user):
         try:
-            website = WebsiteModel.objects.get(pk=pk)
+            website = WebsiteModel.objects.get(pk=pk, user=user)
             return website
         except WebsiteModel.DoesNotExist:
             return
@@ -417,12 +430,12 @@ class IpListAPIView(APIView):
         return ips_data
 
     def get(self, request, pk):
-        obj = self.get_object(pk)
+        obj = self.get_object(pk, user=self.request.user)
         if not obj:
             return Response(data={"msg": "没有此域名信息"}, status=status.HTTP_404_NOT_FOUND)
 
         # 调用es聚合查询所有ip的数量
-        aggre = Aggregation(index='visit', domain=obj.domain)
+        aggre = Aggregation(index='visit', domain=obj.domain, user_id=self.request.user.id)
         ips_aggregation_all = aggre.get_ip_aggregation()
         ips_all = self.to_serializer(ips_aggregation_all)
 
@@ -453,9 +466,10 @@ class SpiderAPIView(APIView):
     """
     爬虫的统计
     """
+    permission_classes = [IsAuthenticated]
 
     @staticmethod
-    def get_object(pk):
+    def get_object(pk, user):
         try:
             website = WebsiteModel.objects.get(pk=pk)
             return website
@@ -463,7 +477,7 @@ class SpiderAPIView(APIView):
             return
 
     def get(self, request, pk, *args, **kwargs):
-        website = self.get_object(pk=pk)
+        website = self.get_object(pk=pk, user=self.request.user)
         spider_aggregation = SpiderAggregation(index='visit', domain=website.domain)
         get_spider_aggregatio = spider_aggregation.get_spider_aggregation()
         print(get_spider_aggregatio)
@@ -474,6 +488,7 @@ class TotalIpVisit(APIView):
     """
     统计所有的ip和访问量
     """
+    permission_classes = [IsAuthenticated]
 
     def to_serailizer(self, es_data):
         date = []
@@ -488,7 +503,7 @@ class TotalIpVisit(APIView):
         return date, count
 
     def get(self, request):
-        total = TotalIPVisit(index='visit')
+        total = TotalIPVisit(index='visit', user_id=self.request.user.id)
         visit_date, visit_count = self.to_serailizer(total.total_visit())
         es_ips = total.total_ip()
         ip_count = [bucket.unique_ips.value for bucket in es_ips]

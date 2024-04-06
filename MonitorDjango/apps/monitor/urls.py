@@ -19,7 +19,7 @@ from . import views
 urlpatterns = [
     path('index/', views.index, name='index'),
     path('nginx_logs/', views.nginx_logs, name='nginx_logs'),
-    path('website_stats/', views.website_stats, name='website_stats'),
+    # path('website_stats/', views.website_stats, name='website_stats'),
 
     path('upload/', views.LogUpload.as_view(), name='log_upload'),
 

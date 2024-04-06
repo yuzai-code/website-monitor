@@ -100,7 +100,7 @@
 <script setup lang="ts">
 import { onMounted, ref, defineProps } from 'vue';
 import InputList from '@/components/InputList.vue';  // 确保路径正确
-import axios from 'axios';
+import axiosInstance from '@/axiosConfig.ts'
 import Divider from 'primevue/divider';
 import Card from 'primevue/card';
 import { on } from 'events';
@@ -133,7 +133,7 @@ const fetchData = async () => {
   }
   websiteId.value = selectedWebSite.value.id;
   try {
-    const response = await axios.get(`http://127.0.0.1:8000/api/ip_list/${websiteId.value}/`);
+    const response = await axiosInstance.get(`http://127.0.0.1:8000/api/ip_list/${websiteId.value}/`);
     ips_data.value = response.data;
     console.log('Fetched data:', ips_data.value);
   } catch (error) {

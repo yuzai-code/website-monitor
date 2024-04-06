@@ -14,7 +14,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import Chart from 'primevue/chart'
-import axios from 'axios'
+import axiosInstance from '@/axiosConfig.ts'
 
 
 
@@ -62,8 +62,15 @@ const transformDataToChartData = (apiData) => {
 }
 
 const setChartData = async (id) => {
+    // 获取存储的Token
+    const token = localStorage.getItem('authToken');
     try {
-        const response = await axios.get(`http://127.0.0.1:8000/api/total/`)
+        const response = await axiosInstance.get(`http://127.0.0.1:8000/api/total/`, {
+            headers: {
+                // 添加Token到请求头
+                'Authorization': `Token ${token}`
+            }
+        })
         console.log('Chart data:', response.data)
         chartData.value = transformDataToChartData(response.data)
     } catch (error) {

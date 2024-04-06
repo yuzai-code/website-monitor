@@ -8,7 +8,7 @@
 import { ref, onMounted, watch } from 'vue'
 import Chart from 'primevue/chart'
 import { defineProps } from 'vue'
-import axios from 'axios'
+import axiosInstance from '@/axiosConfig.ts'
 
 const props = defineProps({
   websiteId: Number
@@ -53,7 +53,7 @@ const transformDataToChartData = (apiData) => {
 
 const setChartData = async (id) => {
   try {
-    const response = await axios.get(`http://127.0.0.1:8000/api/chart_data`, {
+    const response = await axiosInstance.get(`http://127.0.0.1:8000/api/chart_data`, {
       params: { id: id }
     })
     console.log('Chart data:', response.data)

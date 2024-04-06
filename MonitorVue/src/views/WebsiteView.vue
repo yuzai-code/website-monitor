@@ -17,7 +17,7 @@
 import { ref, onMounted, watch } from 'vue'
 import DataTable from '@/components/DataTable.vue'
 import InputList from '@/components/InputList.vue'
-import axios from 'axios'
+import axiosInstance from '@/axiosConfig.ts'
 
 
 const customers = ref([])
@@ -37,9 +37,12 @@ const submit = async () => {
   // 保存到sessionStorage
   sessionStorage.setItem('selectedItem', JSON.stringify(selectedItem.value));
 
+  // 获取存储的Token
+  const token = localStorage.getItem('authToken');
+
   try {
-    const response = await axios.get('http://127.0.0.1:8000/api/website_list/', {
-      params: { search: searchText }
+    const response = await axiosInstance.get('http://127.0.0.1:8000/api/website_list/', {
+      params: { search: searchText },
     })
     customers.value = response.data;
   } catch (error) {

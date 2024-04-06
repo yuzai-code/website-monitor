@@ -43,9 +43,10 @@ INSTALLED_APPS = [
     'celery',
     'redis',
     'rest_framework',
+    'rest_framework.authtoken',
     'django_elasticsearch_dsl',
     'user',
-    'rest_framework.authtoken',
+
 ]
 
 MIDDLEWARE = [
@@ -245,4 +246,3 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ],
 }
-

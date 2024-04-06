@@ -31,6 +31,14 @@ import Card from 'primevue/card'
 import ColumnGroup from 'primevue/columngroup' // optional
 import Row from 'primevue/row' // optional
 import Toast from 'primevue/toast'
+// main.js 或 main.ts
+import axios from 'axios'
+
+// 假设你的Token存储在localStorage中
+const token = localStorage.getItem('authToken')
+if (token) {
+  axios.defaults.headers.common['Authorization'] = `Token ${token}`
+}
 
 const app = createApp(App)
 

@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.db import models
 from django.urls import reverse
 
@@ -29,6 +30,7 @@ class WebsiteModel(BaseModel):
         (0, '未部署'),
         (1, '已部署'),
     )
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, verbose_name='用户1', null=True, blank=True)
     site_name = models.CharField(max_length=100, verbose_name='站点名称', blank=True, null=True)
     site_type = models.CharField(max_length=100, verbose_name='站点类型', blank=True, null=True)
     domain = models.CharField(max_length=100, verbose_name='域名', blank=True, null=True, unique=True)
@@ -57,6 +59,7 @@ class VisitModel(BaseModel):
     """
     访问信息
     """
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, verbose_name='用户', null=True, blank=True)
     site = models.ForeignKey(WebsiteModel, on_delete=models.CASCADE, verbose_name='站点')
     visit_time = models.DateTimeField(verbose_name='访问时间', db_index=True)
     remote_addr = models.GenericIPAddressField(verbose_name='客户端IP', blank=True, null=True, db_index=True)

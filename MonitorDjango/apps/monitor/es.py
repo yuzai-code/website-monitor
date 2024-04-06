@@ -9,15 +9,17 @@ class SpiderAggregation:
     爬虫聚合
     """
 
-    def __init__(self, index, domain):
+    def __init__(self, index, domain, user_id):
         self.index = index
+        self.user_id = user_id
+        self.helper = ElasticsearchQueryHelper(index=index)
         self.es = Elasticsearch()
         self.domain = domain
 
     def get_spider_aggregation(self, remote_addr):
         # 创建一个查询实例，指定使用的Elasticsearch实例和索引
         s = Search(using=self.es, index=self.index)
-
+        s = self.helper.filter_by_user_id(s, self.user_id)
         response = s.execute()
         return response.aggregations.ip.buckets
         # # 定义针对不同爬虫的正则表达式过滤器
@@ -49,8 +51,10 @@ class SpiderAggregation:
 # 统计总的IP与访问量
 class TotalIPVisit:
 
-    def __init__(self, index):
+    def __init__(self, index, user_id):
         self.index = index
+        self.user_id = user_id
+        self.helper = ElasticsearchQueryHelper(index=index)
         self.es = Elasticsearch()
         self.two_weeks_ago = datetime.now() - timedelta(weeks=2)  # 计算两周前的日期)
         self.two_weeks_ago_str = self.two_weeks_ago.strftime('%Y-%m-%dT%H:%M:%S')  # 转换为适合Elasticsearch的日期格式字符串)
@@ -72,7 +76,7 @@ class TotalIPVisit:
 
         # 创建搜索对象
         s = Search(using=self.es, index=self.index)
-
+        s = self.helper.filter_by_user_id(s, self.user_id)
         # 构建排除特定用户代理和静态文件路径的查询
         excluded_queries = [Q("regexp", user_agent=ua) for ua in self.excluded_user_agents] + static_paths
 
@@ -110,11 +114,13 @@ class TotalIPVisit:
         :return:
         """
         s = Search(using=self.es, index=self.index)
+        s = self.helper.filter_by_user_id(s, self.user_id)
         # 添加时间范围查询，限制为过去两周
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
 
-        for ua in self.excluded_user_agents:
-            s = s.query('bool', must_not=[Q("regexp", user_agent=ua)])
+        # s = s.query('bool', must=[Q('match', user_agent='google')])
+        # for ua in self.excluded_user_agents:
+        #     s = s.query('bool', must_not=[Q("regexp", user_agent=ua)])
         # 定义日期直方图聚合，以visit_time字段进行按天聚合
         s.aggs.bucket(
             'visits_per_day',
@@ -142,6 +148,7 @@ class TotalIPVisit:
         """
         s = Search(using=self.es, index=self.index)
 
+        s = self.helper.filter_by_user_id(s, self.user_id)
         # 添加时间范围查询，限制为过去两周
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
 
@@ -171,16 +178,20 @@ class TotalIPVisit:
 
 # ip聚合
 class Aggregation:
-    def __init__(self, index, domain=None):
+    def __init__(self, index, domain=None, user_id=None):
         self.index = index
+        self.user_id = user_id
+        self.helper = ElasticsearchQueryHelper(index=index)
         self.es = Elasticsearch()
         self.domain = domain
 
     def get_ip_aggregation(self, size=None):
         # 聚合ip查询
         s = Search(using=self.es, index=self.index)
-        print(self.domain)
-        s = s.filter('term', domain__keyword=self.domain)
+
+        if self.domain:
+            s = s.filter('term', domain__keyword=self.domain)
+        s = self.helper.filter_by_user_id(s, self.user_id)
         s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
         response = s.execute()
         return response.aggregations.ip.buckets
@@ -189,6 +200,7 @@ class Aggregation:
         # 获取过去5分钟内ip数量最多的前10个
         s = Search(using=self.es, index=self.index)
         s = s.filter('term', domain__keyword=self.domain)
+        s = self.helper.filter_by_user_id(s, self.user_id)
         s = s.filter('range', **{'visit_time': {
             'gte': 'now-5m/m', 'lte': 'now/m'
         }})
@@ -200,6 +212,7 @@ class Aggregation:
         # 获取过去一个小时内ip数量最多的前10个
         s = Search(using=self.es, index=self.index)
         s = s.filter('term', domain__keyword=self.domain)
+        s = self.helper.filter_by_user_id(s, self.user_id)
         s = s.filter('range', **{'visit_time': {'gte': 'now-1h', 'lte': 'now'}})
         s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
         response = s.execute()
@@ -209,6 +222,7 @@ class Aggregation:
         # 获取今天一天内ip数量最多的前10各
         s = Search(using=self.es, index=self.index)
         s = s.filter('term', domain__keyword=self.domain)
+        s = self.helper.filter_by_user_id(s, self.user_id)
         # 将时间范围过滤调整为过去24小时  # todo 之后可以使用@timestamp
         s = s.filter('range', **{'visit_time': {'gte': 'now-24h/h', 'lte': 'now/h'}})
         s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
@@ -218,6 +232,30 @@ class Aggregation:
     def search_ip(self, ip, size=None):
         # 根据ip查询
         s = Search(using=self.es, index=self.index)
+        s = self.helper.filter_by_user_id(s, self.user_id)
         s = s.query(Q('term', domain__keyword=self.domain) & Q('term', remote_addr=ip))
         response = s.execute()
         return response
+
+
+class ElasticsearchQueryHelper:
+    def __init__(self, index):
+        self.index = index
+        self.es = Elasticsearch()
+
+    def filter_by_domain(self, search, domain=None):
+        if domain:
+            search = search.filter('term', domain__keyword=domain)
+        return search
+
+    def filter_by_user_id(self, search, user_id=None):
+        if user_id:
+            search = search.filter('term', user_id=user_id)
+        return search
+
+    def aggregate_by_field(self, search, field, agg_name='aggregation', size=15):
+        search.aggs.bucket(agg_name, 'terms', field=field, size=size)
+        return search
+
+    def execute_search(self, search):
+        return search.execute()

@@ -76,6 +76,23 @@
                 <span class="font-medium">Settings</span>
               </a>
             </li>
+            <li>
+              <LogoutButton />
+            </li>
+            <li>
+              <router-link :to="{ name: 'Login' }"
+                class="flex align-items-center cursor-pointer p-3 border-round text-700 hover:surface-100 transition-duration-150 transition-colors p-ripple">
+                <i class="pi pi-cog mr-2"></i>
+                <span class="font-medium">登录</span>
+              </router-link>
+            </li>
+            <li>
+              <router-link :to="{ name: 'Register' }"
+                class="flex align-items-center cursor-pointer p-3 border-round text-700 hover:surface-100 transition-duration-150 transition-colors p-ripple">
+                <i class="pi pi-cog mr-2"></i>
+                <span class="font-medium">注册</span>
+              </router-link>
+            </li>
           </ul>
         </div>
       </div>
@@ -93,6 +110,8 @@
 
 <script setup>
 import { ref } from 'vue'
+import LogoutButton from '@/components/LogoutButton.vue'
+import LoginView from './views/LoginView.vue';
 
 const visible = ref(false) // State to control the visibility of the sidebar
 </script>
