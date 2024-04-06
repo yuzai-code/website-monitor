@@ -32,15 +32,15 @@ def update_total(sender, instance, created, **kwargs):
 
         # 统计每天的访问量、访客量、IP数、流量总量
         ip_count = VisitModel.objects.filter(site=website, visit_time__date=traffic_date).values(
-            IP_LIST['http_x_forwarded_for']).distinct().count()
+            IP_LIST['remote_addr']).distinct().count()
         visit_count = VisitModel.objects.filter(site=website, visit_time__date=traffic_date).count()
         visitor_count = VisitModel.objects.filter(site=website, visit_time__date=traffic_date).values(
-            IP_LIST['http_x_forwarded_for'],
+            IP_LIST['remote_addr'],
             'user_agent').distinct().count()
 
         # 统计站点的总访问量、访客量、IP数、流量总量
-        ip_total = VisitModel.objects.filter(site=website).values(IP_LIST['http_x_forwarded_for']).distinct().count()
-        visitor_total = VisitModel.objects.filter(site=website).values(IP_LIST['http_x_forwarded_for'],
+        ip_total = VisitModel.objects.filter(site=website).values(IP_LIST['remote_addr']).distinct().count()
+        visitor_total = VisitModel.objects.filter(site=website).values(IP_LIST['remote_addr'],
                                                                        'user_agent').distinct().count()
         visit_total = VisitModel.objects.filter(site=website).count()
         data_transfer_total = \

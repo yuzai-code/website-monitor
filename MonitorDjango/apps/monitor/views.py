@@ -62,21 +62,18 @@ class LogUpload(APIView):
             file = self.request.FILES['upload_file']
             domain = self.request.POST.get('website', None)
             nginx_format = self.request.POST.get('nginx_log_format')
-            # print('sdasda')
-            # file = request.FILES.get('upload_file')
-            # domain = request.POST.get('website', '')
-            # nginx_format = request.POST.get('nginx_log_format', '')
+
             print(f'file: {file}, domain:{domain},nginx_format:{nginx_format}')
             file_name = file.name
             if domain.strip() == '':
                 self.handle_uploaded_file(file, file_name, domain, nginx_format)
-                return JsonResponse({'message': '文件上传成功'}, status=200)
+                return Response({'message': '文件上传成功'}, status=status.HTTP_200_OK)
             self.handle_uploaded_file(file, file_name, domain, nginx_format)
-            return JsonResponse({'message': '文件上传成功'}, status=200)
+            return Response({'message': '文件上传成功'}, status=status.HTTP_200_OK)
         except Exception as e:
             # 表单验证  失败的情况
-            print('error',e)
-            return JsonResponse({'message': '文件上传失败'}, status=404)
+            print('error', e)
+            return Response({'message': '文件上传失败'}, status=status.HTTP_404_NOT_FOUND)
 
     def generate_nginx_regex(self, nginx_format):
         try:
@@ -135,7 +132,7 @@ class LogUpload(APIView):
                 if line.strip():
                     if isinstance(line, bytes):
                         line = line.decode('utf-8')
-                    self.parse_nginx_log(line, website=None, nginx_format=nginx_format)
+                    self.parse_nginx_log(line, website=None, nginx_format=nginx_format, user=user)
             return None
 
         # 获取站点信息，如果站点不存在则创建
@@ -147,7 +144,7 @@ class LogUpload(APIView):
                     line = line.decode('utf-8')
                 self.parse_nginx_log(line, website, nginx_format, user=user)
 
-    def parse_nginx_log(self, line, website, nginx_format, user=None):
+    def parse_nginx_log(self, line, website, nginx_format, user):
 
         try:
             # 使用pygrok解析日志
@@ -188,10 +185,15 @@ class LogUpload(APIView):
                     method = log.get('request_method'),
                     path = log.get('request_uri'),
                     HTTP_protocol = log.get('server_protocol')
+
+                if log.get('request_uri'):
+                    domain = log.get('request_uri').split('/')[2]
+                else:
+                    domain = log.get('request').split('/')[2]
+
                 if website:
                     # print(f'visit_time: {visit_time}')
-                    logging.info(f'Parsed log line: {log}')
-                    return VisitModel.objects.get_or_create(
+                    visite = VisitModel.objects.get_or_create(
                         site=website,
                         user=user,
                         visit_time=visit_time,
@@ -209,11 +211,12 @@ class LogUpload(APIView):
                             'request_time': log.get('request_time')
                         }
                     )
-                else:
-                    domain = log.get('request_uri').split('/')[2]
-                    website, _ = WebsiteModel.objects.get_or_create(domain=domain)
                     logging.info(f'Parsed log line: {log}')
-                    return VisitModel.objects.get_or_create(
+                    return visite
+
+                else:
+                    website, _ = WebsiteModel.objects.get_or_create(domain=domain, user=user)
+                    visite = VisitModel.objects.get_or_create(
                         site=website,
                         user=user,
                         visit_time=visit_time,
@@ -232,6 +235,9 @@ class LogUpload(APIView):
                             'request_time': log.get('request_time')
                         }
                     )
+                    logging.info(f'Parsed log line: {log}')
+                    return visite
+
         except Exception as e:
             logging.error(f'Failed to parse log line: {e}')
             return None
@@ -506,15 +512,19 @@ class TotalIpVisit(APIView):
         total = TotalIPVisit(index='visit', user_id=self.request.user.id)
         visit_date, visit_count = self.to_serailizer(total.total_visit())
         es_ips = total.total_ip()
+        ip_date = [bucket.key_as_string for bucket in es_ips]
         ip_count = [bucket.unique_ips.value for bucket in es_ips]
         es_google_ips = total.google_ip()
-        google_ips = [bucket.doc_count for bucket in es_google_ips]
+        dates = [bucket.key_as_string for bucket in es_google_ips]
+        google_ips_counts = [bucket.doc_count for bucket in es_google_ips]
 
         # print(visit_count, ip_count, google_ips)
         data = {
             'date': visit_date,
             'visit_count': visit_count,
+            'ip_date':ip_date,
             'ip_count': ip_count,
-            'google_ips': google_ips,
+            'google_ips': google_ips_counts,
         }
+        print(data)
         return Response(data, status=status.HTTP_200_OK)

@@ -33,7 +33,7 @@ class WebsiteModel(BaseModel):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, verbose_name='用户1', null=True, blank=True)
     site_name = models.CharField(max_length=100, verbose_name='站点名称', blank=True, null=True)
     site_type = models.CharField(max_length=100, verbose_name='站点类型', blank=True, null=True)
-    domain = models.CharField(max_length=100, verbose_name='域名', blank=True, null=True, unique=True)
+    domain = models.CharField(max_length=100, verbose_name='域名', blank=True, null=True)
     deploy_status = models.IntegerField(choices=DEPLOY_STATUS, default=1, verbose_name='部署状态')
     nginx_log_format = models.CharField(max_length=255, verbose_name='Nginx日志格式', blank=True, null=True)
     ip_total = models.IntegerField(verbose_name='访问IP总数', default=0)

@@ -77,6 +77,10 @@ class TotalIPVisit:
         # 创建搜索对象
         s = Search(using=self.es, index=self.index)
         s = self.helper.filter_by_user_id(s, self.user_id)
+
+        s = s.query("match", http_referer="google.com")
+
+        s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
         # 构建排除特定用户代理和静态文件路径的查询
         excluded_queries = [Q("regexp", user_agent=ua) for ua in self.excluded_user_agents] + static_paths
 
@@ -97,12 +101,17 @@ class TotalIPVisit:
             'visits_per_day',
             'date_histogram',
             field='visit_time',
-            calendar_interval='day'
+            calendar_interval='day',
+            min_doc_count=0,
+            extended_bounds={
+                "min": self.two_weeks_ago_str,
+                "max": datetime.now().strftime('%Y-%m-%dT%H:%M:%S')  # 使用当前时间作为结束时间
+            }
         )
 
         # 执行查询
         response = s.execute()
-
+        # print(response)
         # 遍历聚合结果并打印每天的访问量
         for day in response.aggregations.visits_per_day.buckets:
             print(f"Date: {day.key_as_string} - Visits: {day.doc_count}")
@@ -118,7 +127,8 @@ class TotalIPVisit:
         # 添加时间范围查询，限制为过去两周
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
 
-        # s = s.query('bool', must=[Q('match', user_agent='google')])
+        # s = s.query('match', user_agent='Googlebot')
+
         # for ua in self.excluded_user_agents:
         #     s = s.query('bool', must_not=[Q("regexp", user_agent=ua)])
         # 定义日期直方图聚合，以visit_time字段进行按天聚合
@@ -126,7 +136,12 @@ class TotalIPVisit:
             'visits_per_day',
             'date_histogram',
             field='visit_time',
-            calendar_interval='day'
+            calendar_interval='day',
+            min_doc_count=0,
+            extended_bounds={
+                "min": self.two_weeks_ago_str,
+                "max": datetime.now().strftime('%Y-%m-%dT%H:%M:%S')  # 使用当前时间作为结束时间
+            }
         ).bucket(
             'unique_ips',
             'cardinality',
@@ -153,17 +168,20 @@ class TotalIPVisit:
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
 
         # 使用match_phrase查询匹配包含"Googlebot"的用户代理字符串
-        s = s.query('bool', must=[Q("match_phrase", user_agent="Googlebot")])
-
-        # 使用match查询对http_referer进行模糊匹配
-        s = s.query('bool', must=[Q('match', http_referer='https://www.google.com/')])
+        # s = s.query('bool', must=[Q("match_phrase", user_agent="Googlebot")])
+        s = s.query("match", user_agent="Googlebot")
 
         # 定义日期直方图聚合，以visit_time字段进行按天聚合
         s.aggs.bucket(
             'visits_per_day',
             'date_histogram',
             field='visit_time',
-            calendar_interval='day'
+            calendar_interval='day',
+            min_doc_count=0,
+            extended_bounds={
+                "min": self.two_weeks_ago_str,
+                "max": datetime.now().strftime('%Y-%m-%dT%H:%M:%S')  # 使用当前时间作为结束时间
+            }
         )
 
         # 执行查询
