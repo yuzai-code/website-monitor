@@ -1,64 +1,29 @@
-from django_elasticsearch_dsl import Document, fields
-from django_elasticsearch_dsl.registries import registry
+from elasticsearch_dsl import Document, Text, Keyword, Integer, Date, Float
+from datetime import datetime
 
-from monitor.models import VisitModel, WebsiteModel
-
-
-@registry.register_document
-class WebsiteDocument(Document):
-    user_id = fields.IntegerField(attr='user.id')
-
-    class Index:
-        name = 'website'
-        settings = {
-            "number_of_shards": 1,
-        }
-
-    class Django:
-        model = WebsiteModel
-        fields = [
-            'site_name',
-            'site_type',
-            'domain',
-            'deploy_status',
-            'ip_total',
-            'visit_total',
-            'data_transfer_total',
-            'visitor_total',
-            'error_total',
-            'malicious_request_total',
-            'request_per_second'
-        ]
-
-
-@registry.register_document
 class VisitDocument(Document):
-    domain = fields.TextField(
-        attr='site.domain',
-        fields={
-            'keyword': fields.KeywordField(),
-        }
-    )
-    remote_addr = fields.KeywordField()
-    http_x_forwarded_for = fields.KeywordField()
-    user_id = fields.IntegerField(attr='user.id')
+    domain = Text()
+    remote_addr = Keyword()
+    http_x_forwarded_for = Keyword()
+    user_id = Integer()
+    path = Text()
+    visit_time = Date()
+    user_agent = Text()
+    method = Keyword()
+    HTTP_protocol = Keyword()
+    status_code = Text()
+    data_transfer = Integer()
+    http_referer = Text()
+    malicious_request = Keyword()
+    request_time = Float()
 
     class Index:
         name = 'visit'
         settings = {
-            "number_of_shards": 1,
+            "number_of_shards": 2,
         }
 
-    class Django:
-        model = VisitModel
-        fields = [
-            'visit_time',
-            'user_agent',
-            'path',
-            'method',
-            'status_code',
-            'data_transfer',
-            'http_referer',
-            'malicious_request',
-            'request_time'
-        ]
+    def save(self, **kwargs):
+        # 指定索引名称以保存文档
+        self.meta.index = self.Index.name
+        return super().save(**kwargs)

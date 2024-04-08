@@ -23,4 +23,4 @@ class VisitModelAdmin(admin.ModelAdmin):
     list_per_page = 50
     list_filter = ['site', 'visit_time', 'user', 'http_referer', 'http_x_forwarded_for', 'method', 'status_code',
                    'malicious_request']
-    search_fields = ['http_referer','user_agent']
+    search_fields = ['http_referer', 'user_agent']

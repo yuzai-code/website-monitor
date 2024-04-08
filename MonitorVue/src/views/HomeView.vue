@@ -52,6 +52,7 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 const dates = ref()
 const selectedWebSite = ref(null)
+const progress = ref(0); // 进度条百分比
 const websiteData = ref({
   visitor_totals: 0,
   ip_totals: 0,
@@ -65,6 +66,27 @@ const logFormat = ref('')
 const fileUpload = ref(null)
 const csrfToken = ref('')
 const history = ref([])  // 历史记录
+let pollingInterval = null; // 轮询间隔
+
+
+const checkTaskStatus = async (taskId) => {
+  try {
+    const response = await axiosInstance.get(`/api/task-status/${taskId}/`);
+    if (response.data.status === 'SUCCESS' || response.data.status === 'FAILURE') {
+      toast.add({
+        severity: response.data.status === 'SUCCESS' ? 'success' : 'error',
+        summary: response.data.status === 'SUCCESS' ? '处理完成' : '处理失败',
+        detail: response.data.status === 'SUCCESS' ? '文件已成功处理' : '文件处理失败，请重试',
+        life: 3000
+      });
+      clearInterval(pollingInterval); // 停止轮询
+    }
+  } catch (error) {
+    console.error('状态检查失败:', error);
+    // 可以在这里实现重试逻辑或停止轮询
+    clearInterval(pollingInterval); // 停止轮询
+  }
+};
 
 
 const submit_up = async () => {
@@ -77,7 +99,13 @@ const submit_up = async () => {
 
 
     try {
-      const response = await axiosInstance.post('http://127.0.0.1:8000/api/upload/', formData);
+      const response = await axiosInstance.post('api/upload/', formData);
+
+      // 保存任务ID
+      const taskId = response.data.task_id;
+
+      // 使用taskId进行轮询
+      pollingInterval = setInterval(() => checkTaskStatus(taskId), 5000);
 
       // 保存域名到历史记录
       if (logFormat.value) {
@@ -101,7 +129,6 @@ const submit_up = async () => {
     toast.add({ severity: 'warn', summary: '无文件', detail: '请先选择一个文件', life: 3000 });
   }
 };
-
 
 
 const setTodayAsDefaultDate = () => {
@@ -128,7 +155,7 @@ const submit = async () => {
   websiteId.value = selectedWebSite.value.id
   console.log('Data:', data)
   try {
-    const response = await axiosInstance.post('http://127.0.0.1:8000/api/website_list/', data)
+    const response = await axiosInstance.post('api/website_list/', data)
     console.log('Response:', response.data)
     websiteData.value = response.data
   } catch (error) {
@@ -145,7 +172,7 @@ function clearHistory() {
 
 onMounted(async () => {
   try {
-    const response = await axiosInstance.get('http://127.0.0.1:8000/api/csrf_token/',);
+    const response = await axiosInstance.get('api/csrf_token/',);
     console.log('CSRF 令牌:', response);
     csrfToken.value = response.data.csrfToken;
   } catch (error) {

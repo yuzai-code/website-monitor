@@ -41,7 +41,7 @@ const submit = async () => {
   const token = localStorage.getItem('authToken');
 
   try {
-    const response = await axiosInstance.get('http://127.0.0.1:8000/api/website_list/', {
+    const response = await axiosInstance.get('api/website_list/', {
       params: { search: searchText },
     })
     customers.value = response.data;

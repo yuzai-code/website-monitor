@@ -4,17 +4,12 @@ import gzip
 import tempfile
 from datetime import datetime, timedelta
 
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import ObjectDoesNotExist
-from django.db import models
 from django.db.models import Count, Q, Avg, Sum, F
 from django.db.models.functions import TruncDay
-from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.utils.dateparse import parse_date
-from django.views.generic import CreateView, DetailView, ListView
 from pygrok import pygrok
 from rest_framework import status
 from rest_framework.generics import RetrieveAPIView
@@ -23,11 +18,18 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .es import Aggregation, SpiderAggregation, TotalIPVisit
-from .forms import LogFileForm
 from .models import VisitModel, WebsiteModel, LogFileModel
 from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer
+from .tasks import handle_uploaded_file_task
+from django.http import JsonResponse
+from celery.result import AsyncResult
 
 pattern_string = r'(?P<remote_addr>\d+\.\d+\.\d+\.\d+) - - \[(?P<time_local>.+?)\] "(?P<method>\S+) (?P<path>\S+) (?P<protocol>HTTP\/\d\.\d)" (?P<status>\d{3}) (?P<body_bytes_sent>\d+) "(?P<http_referer>[^"]*)" "(?P<user_agent>[^"]+)"'
+
+
+def task_status(request, task_id):
+    task_result = AsyncResult(task_id)
+    return JsonResponse({'status': task_result.status, 'result': task_result.result})
 
 
 def csrf_token(request):
@@ -57,211 +59,34 @@ class LogUpload(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        # print('111')
         try:
             file = self.request.FILES['upload_file']
             domain = self.request.POST.get('website', None)
             nginx_format = self.request.POST.get('nginx_log_format')
 
-            print(f'file: {file}, domain:{domain},nginx_format:{nginx_format}')
-            file_name = file.name
-            if domain.strip() == '':
-                self.handle_uploaded_file(file, file_name, domain, nginx_format)
-                return Response({'message': '文件上传成功'}, status=status.HTTP_200_OK)
-            self.handle_uploaded_file(file, file_name, domain, nginx_format)
-            return Response({'message': '文件上传成功'}, status=status.HTTP_200_OK)
+            # 保存文件
+            log_file = LogFileModel(
+                user=request.user,
+                upload_file=file,
+                nginx_log_format=nginx_format,
+            )
+            log_file.save()
+
+            # 调用celery任务
+            result = handle_uploaded_file_task.delay(log_file.id, domain)
+            # handle_uploaded_file_task(log_file.id, domain)
+            # 获取任务id
+            task_id = result.id
+
+            return Response({'message': '文件上传成功，正在后台处理',
+                             'task_id': task_id
+                             },
+                            status=status.HTTP_202_ACCEPTED)
         except Exception as e:
-            # 表单验证  失败的情况
-            print('error', e)
-            return Response({'message': '文件上传失败'}, status=status.HTTP_404_NOT_FOUND)
-
-    def generate_nginx_regex(self, nginx_format):
-        try:
-            # 预处理nginx_format字符串以移除换行符和多余的空格
-            nginx_format = nginx_format.replace('\n', ' ').replace('\r', '').replace('\t', ' ').replace("'", '')
-            nginx_format = re.sub(r'\s+', ' ', nginx_format).strip()
-
-            patterns = {
-                r'\$remote_addr': r'(?P<remote_addr>\\S+)',
-                r'\$remote_user': r'(?P<remote_user>\\S*)',
-                r'\$request_time': r'(?P<request_time>\\S+)',
-                r'\[\$time_local\]': r"(?P<time_local>.*?)",
-                r'\$request_method': r'(?P<request_method>\\S+)',
-                r'\$scheme://\$host\$request_uri': r'(?P<request_uri>\\S+)',
-                r'\$request': r'(?P<request>.+?)',
-                r'\$server_protocol': r'(?P<server_protocol>.*?)',  # 修改这里的变量名，移除$
-                r'\$status': r'(?P<status>\\d{3})',
-                r'\$body_bytes_sent': r'(?P<body_bytes_sent>\\d+)',
-                r'\$http_referer': r'(?P<http_referer>.*?)',
-                r'\$http_user_agent': r'(?P<http_user_agent>.+?)',
-                r'\$http_x_forwarded_for': r'(?P<http_x_forwarded_for>.*?)',
-                r'\$upstream_response_time': r'(?P<upstream_response_time>\\S+)',
-            }
-
-            for variable, pattern in patterns.items():
-                nginx_format = re.sub(variable, pattern, nginx_format)
-
-            return nginx_format
-        except Exception as e:
-            logging.error(f'Failed to generate nginx regex: {e}')
-            return Response()
-
-    def handle_uploaded_file(self, file, file_name=None, domain=None, nginx_format=None):
-        user = self.request.user
-        # 处理上传的nginx日志文件
-        if file_name and file_name.endswith('.gz'):
-            # 使用TemporaryFile或者BytesIO临时保存上传的文件
-            with tempfile.TemporaryFile() as tmp:
-                # 将上传的文件内容写入临时文件
-                for chunk in file.chunks():
-                    tmp.write(chunk)
-                tmp.seek(0)  # 重置文件指针到开始
-
-                # 使用gzip打开临时文件
-                with gzip.open(tmp, 'rt', encoding='utf-8') as gz_file:
-                    # 确保在这里重新定位到文件开始，如果你要在process_log_file中再次读取
-                    self.process_log_file(gz_file, domain, nginx_format, user=user)
-        else:
-            # 如果文件不是压缩文件，则直接处理
-            self.process_log_file(file, domain, nginx_format, user=user)
-
-    def process_log_file(self, file, domain, nginx_format, user=None):
-        # 处理日志文件
-        if domain.strip() == '':  # 如果domain为空，就从文件中的request获取
-            for line in file:
-                if line.strip():
-                    if isinstance(line, bytes):
-                        line = line.decode('utf-8')
-                    self.parse_nginx_log(line, website=None, nginx_format=nginx_format, user=user)
-            return None
-
-        # 获取站点信息，如果站点不存在则创建
-        website, _ = WebsiteModel.objects.get_or_create(domain=domain, user=user)
-        for line in file:
-            # print(f'line: {line}')
-            if line.strip():
-                if isinstance(line, bytes):
-                    line = line.decode('utf-8')
-                self.parse_nginx_log(line, website, nginx_format, user=user)
-
-    def parse_nginx_log(self, line, website, nginx_format, user):
-
-        try:
-            # 使用pygrok解析日志
-            pattern_string = self.generate_nginx_regex(nginx_format)
-            # print(f'pattern_string: {pattern_string}')
-            # print(f'line: {line}')
-            # 移除所有单引号
-            pattern_string = pattern_string.replace("'", "")
-
-            # 使用正则表达式将多个空格替换为一个空格
-            pattern_string = re.sub(r'\s+', ' ', pattern_string).strip()
-
-            # 使用pygrok解析日志
-            grok = pygrok.Grok(pattern_string)
-            match = grok.match(line)
-            if match:
-                log = match
-                # domain = log['request'].split('/')[2]
-                visit_time = log.get('time_local')
-                # 移除方括号
-                time_data = visit_time.strip('[]')
-                # 转换成YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ]日期格式
-                visit_time = datetime.strptime(time_data, '%d/%b/%Y:%H:%M:%S %z')
-
-                # 处理remote_addr
-                if log.get('http_x_forwarded_for'):
-                    remote_addr = log.get('http_x_forwarded_for')
-                else:
-                    remote_addr = log.get('remote_addr')
-
-                # 判断并处理路径
-                if log.get('request'):
-                    parts = log.get('request').split(' ', 2)
-                    method = parts[0]
-                    path = parts[1]
-                    HTTP_protocol = parts[2]
-                else:
-                    method = log.get('request_method'),
-                    path = log.get('request_uri'),
-                    HTTP_protocol = log.get('server_protocol')
-
-                if log.get('request_uri'):
-                    domain = log.get('request_uri').split('/')[2]
-                else:
-                    domain = log.get('request').split('/')[2]
-
-                if website:
-                    # print(f'visit_time: {visit_time}')
-                    visite = VisitModel.objects.get_or_create(
-                        site=website,
-                        user=user,
-                        visit_time=visit_time,
-                        remote_addr=remote_addr,
-                        user_agent=log.get('http_user_agent', ''),
-                        defaults={
-                            # 'user_agent': log.get('http_user_agent', ''),
-                            'path': path,
-                            'method': method,
-                            'status_code': log.get('status'),
-                            'HTTP_protocol': log.get(HTTP_protocol),
-                            'data_transfer': log.get('body_bytes_sent'),
-                            'http_referer': log.get('http_referer'),
-                            'malicious_request': False,
-                            'request_time': log.get('request_time')
-                        }
-                    )
-                    logging.info(f'Parsed log line: {log}')
-                    return visite
-
-                else:
-                    website, _ = WebsiteModel.objects.get_or_create(domain=domain, user=user)
-                    visite = VisitModel.objects.get_or_create(
-                        site=website,
-                        user=user,
-                        visit_time=visit_time,
-                        remote_addr=remote_addr,
-                        user_agent=log.get('http_user_agent', ''),
-                        defaults={
-                            # 'user_agent': log.get('http_user_agent', ''),
-                            'path': path,
-                            'method': method,
-                            'status_code': log.get('status'),
-                            'HTTP_protocol': HTTP_protocol,
-                            'data_transfer': log.get('body_bytes_sent'),
-                            'http_referer': log.get('http_referer'),
-                            'malicious_request': False,
-                            'http_x_forwarded_for': remote_addr,
-                            'request_time': log.get('request_time')
-                        }
-                    )
-                    logging.info(f'Parsed log line: {log}')
-                    return visite
-
-        except Exception as e:
-            logging.error(f'Failed to parse log line: {e}')
-            return None
+            print(e)
+            return Response({'message': f'文件上传失败: {str(e)}'}, status=400)
 
 
-# def website_stats(request):
-#     website = request.GET.get('website')
-#     if website:
-#         try:
-#             data = WebsiteModel.objects.get(domain=website)
-#             data_dict = {
-#                 'ip_total': data.ip_total,
-#                 'visit_total': data.visit_total,
-#                 'data_transfer_total': data.data_transfer_total,
-#                 'visitor_total': data.visitor_total,
-#             }
-#             return render(request, 'website_stats.html', {'data': data_dict})
-#         except ObjectDoesNotExist:
-#             return JsonResponse({'message': '站点不存在'}, status=400)
-#     else:
-#         return render(request, 'website_stats.html')
-#
-
-# class WebsiteListView(ListView):
 class WebsiteListAPIView(APIView):
     """
     获取站点列表
@@ -522,7 +347,7 @@ class TotalIpVisit(APIView):
         data = {
             'date': visit_date,
             'visit_count': visit_count,
-            'ip_date':ip_date,
+            'ip_date': ip_date,
             'ip_count': ip_count,
             'google_ips': google_ips_counts,
         }

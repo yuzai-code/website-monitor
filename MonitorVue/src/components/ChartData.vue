@@ -53,7 +53,7 @@ const transformDataToChartData = (apiData) => {
 
 const setChartData = async (id) => {
   try {
-    const response = await axiosInstance.get(`http://127.0.0.1:8000/api/chart_data`, {
+    const response = await axiosInstance.get(`api/chart_data`, {
       params: { id: id }
     })
     console.log('Chart data:', response.data)

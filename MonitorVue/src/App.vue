@@ -1,5 +1,6 @@
 <template>
   <div class="flex-container">
+    <Toast />
     <div class="sidebar" v-if="visible">
       <div class="flex flex-column h-full">
         <div class="flex align-items-center justify-content-between px-4 pt-3 flex-shrink-0">

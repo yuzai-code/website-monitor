@@ -8,10 +8,11 @@ from utils.basemodel import BaseModel
 # Create your models here.
 
 class LogFileModel(BaseModel):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, verbose_name='用户', null=True, blank=True)
     website = models.ForeignKey('WebsiteModel', on_delete=models.CASCADE, verbose_name='站点', blank=True, null=True)
     upload_file = models.FileField(upload_to='log', verbose_name='上传文件')
     upload_time = models.DateTimeField(auto_now_add=True, verbose_name='上传时间')
-    nginx_log_format = models.CharField(max_length=255, verbose_name='Nginx日志格式', blank=True, null=True)
+    nginx_log_format = models.CharField(max_length=600, verbose_name='Nginx日志格式', blank=True, null=True)
 
     class Meta:
         db_table = 't_log_file'

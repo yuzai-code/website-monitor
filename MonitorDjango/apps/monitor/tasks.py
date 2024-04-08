@@ -1,161 +1,215 @@
+import gzip
+import hashlib
 import os
 
 import sys
 
 from django.core.wsgi import get_wsgi_application
+from elasticsearch.helpers import bulk
+from elasticsearch_dsl import connections, Search, Index
+from rest_framework.response import Response
+
+from monitor.documents import VisitDocument
 
 sys.path.extend(['/home/yuzai/Desktop/WebsiteMonitor'])
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "WebsiteMonitor.settings")
 application = get_wsgi_application()
-import configparser
 import logging
 import re
-import select
-import paramiko
+
 from celery import shared_task
-from monitor.models import WebsiteModel, VisitModel
+from monitor.models import WebsiteModel, VisitModel, LogFileModel
 import pygrok
-from django.db.models import Count
 from datetime import datetime, timedelta
 
-# 全局变量存储配置信息
-config = configparser.ConfigParser()
-config.read('config.ini')
-
-# SSH连接池
-ssh_pool = paramiko.SSHClient()
-ssh_pool.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh_pool.connect(hostname=config['SSH']['hostname'], port=int(config['SSH']['port']),
-                 username=config['SSH']['username'], password=config['SSH']['password'])
-
-pattern = re.compile(
-    r'(?P<remote_addr>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) - - \[(?P<time_local>.+?)\] "(?P<request>.+?)" '
-    r'(?P<status>\d{3}) (?P<body_bytes_sent>\d+) "(?P<http_referer>.+?)" "(?P<user_agent>.+?)" '
-    r'"(?P<http_x_forwarded_for>.+?)" "(?P<request_time>.+?)"',
-    re.DOTALL
-)
-pattern_string = (
-    r'(?P<remote_addr>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}) - - \[(?P<time_local>.+?)\] "(?P<request>.+?)" '
-    r'(?P<status>\d{3}) (?P<body_bytes_sent>\d+) "(?P<http_referer>.+?)" "(?P<user_agent>.+?)" '
-    r'"(?P<http_x_forwarded_for>.+?)" "(?P<request_time>.+?)"'
-)
+# 建立Elasticsearch连接
+# connections.create_connection(hosts=['localhost:9200'], timeout=20)
+elasticsearch_client = connections.create_connection(hosts=['localhost:9200'], timeout=20)
 
 
-def get_ssh_connection():
-    """
-    Establishes and returns an SSH connection using global configuration.
-    """
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh_client.connect(
-        hostname=config['SSH']['hostname'],
-        port=int(config['SSH']['port']),
-        username=config['SSH']['username'],
-        password=config['SSH']['password']
-    )
-    return ssh_client
-
-
-@shared_task(name='process_nginx_logs', queue='process_nginx_logs')
-def process_nginx_logs():
-    """
-    处理nginx日志文件
-    """
+@shared_task(name='handle_file', queue='handle_file')
+def handle_uploaded_file_task(log_file_id, domain):
+    BATCH_SIZE = 1000  # 设置批量处理的大小
+    batch = []  # 设置批量处理队列
     try:
-        # Using the global SSH connection pool to get a connection
-        ssh_client = get_ssh_connection()
+        log_file = LogFileModel.objects.get(id=log_file_id)
+        file_path = log_file.upload_file.path
+        nginx_format = log_file.nginx_log_format
+        user = log_file.user
 
-        # Execute the tail -F command to get the real-time log stream
-        channel = ssh_client.invoke_shell()
-        channel.send(f'tail -F {config["Log"]["path"]}\n')
-        channel_file = channel.makefile('r')
+        # 使用pygrok解析日志
+        pattern_string = generate_nginx_regex(nginx_format)
 
-        logs_to_create = []
-        for line in channel_file:
-            if line.strip() and pattern.match(
-                    line):  # Ignore empty lines and lines that don't match the Nginx log pattern
-                logging.info(f"Processing line of type {type(line)}: {line}")
-                log = parse_nginx_log(line)
-                if log:
-                    logs_to_create.append(log)
+        # 移除所有单引号
+        pattern_string = pattern_string.replace("'", "")
 
-        # Batch create visit information
-        if logs_to_create:
-            VisitModel.objects.bulk_create(logs_to_create)
+        # 使用正则表达式将多个空格替换为一个空格
+        pattern_string = re.sub(r'\s+', ' ', pattern_string).strip()
+        # 检查文件是否是gzip压缩文件
+        if file_path.endswith('.gz'):
+            with gzip.open(file_path, 'rt', encoding='utf-8') as gz_file:
+                for line in gz_file:
+                    process_log_file(batch, line, domain, pattern_string, user)
+                    if len(batch) >= BATCH_SIZE:
+                        # 当批处理队列达到一定大小时执行批量保存
+                        bulk_save_to_elasticsearch(batch)
+                        batch = []  # 重置批量队列
+            if batch:
+                bulk_save_to_elasticsearch(batch)
+        else:
+            with open(file_path, 'rb') as f:
+                for line in f:
+                    # 将读取的字节串解码为字符串
+                    decoded_line = line.decode('utf-8')
+                    process_log_file(batch, decoded_line, domain, pattern_string, user)
+                    if len(batch) >= BATCH_SIZE:
+                        bulk_save_to_elasticsearch(batch)
+                        batch = []
+            if batch:  #
+                bulk_save_to_elasticsearch(batch)
+    except LogFileModel.DoesNotExist:
+        logging.error(f'文件的id不存在:{log_file_id} ')
+
+
+def bulk_save_to_elasticsearch(documents):
+    try:
+        # Perform the bulk operation
+        success, failed = bulk(elasticsearch_client, documents)
+        if not success:
+            logging.error(f'Bulk operation had issues, failed count: {failed}')
+        return success
+    except Exception as e:
+        logging.error(f'Failed to execute bulk operation: {e}')
+        return False
+
+
+def process_log_file(batch, line, domain, pattern_string, user=None):
+    # logging.info('batch: {}'.format(batch))
+    # 处理日志文件
+    if domain.strip() == '':  # 如果domain为空，就从文件中的request获取
+        parse_nginx_log(batch, line, domain=None, pattern_string=pattern_string, user=user)
+        return None
+
+    parse_nginx_log(batch, line, domain, pattern_string, user=user)
+
+
+def generate_document_id(*args):
+    """
+    生成基于日志内容的唯一标识符，例如使用md5
+    """
+    unique_string = '-'.join(str(arg) for arg in args)
+    return hashlib.md5(unique_string.encode('utf-8')).hexdigest()
+
+
+def parse_nginx_log(batch, line, domain, pattern_string, user):
+    try:
+        # 使用pygrok解析日志
+        grok = pygrok.Grok(pattern_string)
+        match = grok.match(line)
+        if match:
+            log = match
+            # domain = log['request'].split('/')[2]
+            visit_time = log.get('time_local')
+            # 移除方括号
+            time_data = visit_time.strip('[]')
+            # 转换成YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ]日期格式
+            visit_time = datetime.strptime(time_data, '%d/%b/%Y:%H:%M:%S %z')
+
+            # 处理remote_addr
+            if log.get('http_x_forwarded_for'):
+                remote_addr = log.get('http_x_forwarded_for')
+            else:
+                remote_addr = log.get('remote_addr')
+
+            # 判断并处理路径
+            if log.get('request'):
+                parts = log.get('request').split(' ', 2)
+                method = parts[0]
+                path = parts[1]
+                HTTP_protocol = parts[2]
+            else:
+                method = log.get('request_method'),
+                path = log.get('request_uri'),
+                HTTP_protocol = log.get('server_protocol')
+            if domain:
+                domain = domain
+            else:
+                if log.get('request_uri'):
+                    domain = log.get('request_uri').split('/')[2]
+                else:
+                    domain = log.get('request').split('/')[2]
+
+            # 生成文档ID
+            doc_id = generate_document_id(visit_time, remote_addr, path, user.id)
+
+            # 检查文档是否存在
+            search = Search(index='visit').query("match", _id=doc_id)
+            response = search.execute()
+            if not response.hits:
+                # 如果文档不存在，则创建并保存新文档
+                # 创建文档而不是立即保存
+                visit_document = {
+                    "_op_type": "index",
+                    "_index": "visit",
+                    "_id": doc_id,
+                    "_source": {
+                        "domain": domain,
+                        "remote_addr": log.get('remote_addr'),
+                        "http_x_forwarded_for": log.get('remote_addr'),
+                        "user_id": user.id,
+                        "path": path,
+                        "visit_time": visit_time,
+                        "user_agent": log.get('http_user_agent'),
+                        "method": method,
+                        "HTTP_protocol": HTTP_protocol,
+                        "status_code": log.get('status_code'),
+                        "data_transfer": log.get('data_transfer'),
+                        "http_referer": log.get('http_referer'),
+                        "malicious_request": log.get('malicious_request'),
+                        "request_time": log.get('request_time')
+                    }
+                }
+                # 将文档添加到批处理队列
+                batch.append(visit_document)
 
     except Exception as e:
-        logging.error(f"An error occurred: {str(e)}")
-    finally:
-        ssh_client.close()
+        logging.error(f'解析日志文件失败: {e}, {line}')
+        return e
 
 
-@shared_task(name='parse_nginx_log', queue='parse_nginx_log')
-def parse_nginx_log(log_line):
-    """
-    解析nginx日志
-    """
-    print(log_line)
-    # 检查log_line是否为字符串
-    if not isinstance(log_line, str):
-        logging.error(f"Failed to parse log line: {log_line} is not a string")
-        return None
-        # 使用pygrok解析日志
+def generate_nginx_regex(nginx_format):
+    try:
+        # 预处理nginx_format字符串以移除换行符和多余的空格
+        nginx_format = nginx_format.replace('\n', ' ').replace('\r', '').replace('\t', ' ').replace("'", '')
+        nginx_format = re.sub(r'\s+', ' ', nginx_format).strip()
 
-    # 使用pygrok解析日志
-    grok = pygrok.Grok(pattern_string)
-    match = grok.match(log_line)
-    if match:
-        log = match
-        # 获取站点信息，如果站点不存在则创建
-        domain = log['request'].split('/')[2]
-        website, _ = WebsiteModel.objects.get_or_create(domain=domain)
-        # 创建访问信息
-        return VisitModel(
-            site=website,
-            visit_time=log['time_local'],
-            remote_addr=log['remote_addr'],
-            user_agent=log['user_agent'],
-            path=log['request'].split(' ')[1].split('?')[0].strip(),
-            method=log['request'].split(' ')[0].strip(),
-            status_code=log['status'],
-            data_transfer=log['body_bytes_sent'],
-            http_referer=log['http_referer'],
-            malicious_request=False,
-            http_x_forwarded_for=log['http_x_forwarded_for'],
-            request_time=log['request_time']
-        )
-    else:
-        logging.error(f"Failed to parse log line: {log_line}")
-        return None
+        patterns = {
+            r'\$remote_addr': r'(?P<remote_addr>\\S+)',
+            r'\$remote_user': r'(?P<remote_user>\\S*)',
+            r'\$request_time': r'(?P<request_time>\\S+)',
+            r'\[\$time_local\]': r"(?P<time_local>.*?)",
+            r'\$request_method': r'(?P<request_method>\\S+)',
+            r'\$scheme://\$host\$request_uri': r'(?P<request_uri>\\S+)',
+            r'\$request': r'(?P<request>.+?)',
+            r'\$server_protocol': r'(?P<server_protocol>.*?)',  # 修改这里的变量名，移除$
+            r'\$status': r'(?P<status>\\d{3})',
+            r'\$body_bytes_sent': r'(?P<body_bytes_sent>\\d+)',
+            r'\$http_referer': r'(?P<http_referer>.*?)',
+            r'\$http_user_agent': r'(?P<http_user_agent>.+?)',
+            r'\$http_x_forwarded_for': r'(?P<http_x_forwarded_for>.*?)',
+            r'\$upstream_response_time': r'(?P<upstream_response_time>\\S+)',
+        }
 
+        for variable, pattern in patterns.items():
+            nginx_format = re.sub(variable, pattern, nginx_format)
 
-@shared_task(name='check_malicious_requests', queue='check_malicious_requests')
-def check_malicious_requests():
-    """
-    检测恶意请求
-    """
-    # 获取一段时间内的请求数据
-    time_threshold = datetime.now() - timedelta(minutes=30)
-    visits = VisitModel.objects.filter(visit_time__gte=time_threshold)
-
-    # 检测频繁的请求
-    # ip_counts = visits.values('remote_addr').annotate(count=Count('remote_addr')).order_by('-count')
-    # for ip_count in ip_counts:
-    #     if ip_count['count'] > 100:  # 如果一个IP在一小时内的请求次数超过100次，我们认为它可能是恶意的
-    #         malicious_ips = VisitModel.objects.filter(remote_addr=ip_count['remote_addr'])
-    #         malicious_ips.update(malicious_request=True)
-
-    # 检测非法的请求
-    malicious_requests = visits.filter(status_code__gte=400)
-    malicious_requests.update(malicious_request=True)
-
-    # 检测可疑的用户代理
-    suspicious_user_agents = visits.filter(user_agent__contains='bot')
-    suspicious_user_agents.update(malicious_request=True)
-
+        return nginx_format
+    except Exception as e:
+        logging.error(f'Failed to generate nginx regex: {e}')
+        return Response()
 
 # 检测恶意请求
 
-
-if __name__ == '__main__':
-    process_nginx_logs()
+#
+# if __name__ == '__main__':
+#  process_nginx_logs()

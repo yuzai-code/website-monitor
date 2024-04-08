@@ -37,22 +37,22 @@ const transformDataToChartData = (apiData) => {
         labels: apiData.date,
         datasets: [
             {
-                label: '访问量',
-                data: apiData.visit_count,
+                label: '来自google的访问量',
+                data: apiData.visit_count || [0],
                 fill: false,
                 borderColor: '#42A5F5',
                 tension: 0.1
             },
             {
-                label: 'IP 数',
-                data: apiData.ip_count,
+                label: '所有 IP',
+                data: apiData.ip_count || [0],
                 fill: false,
                 borderColor: '#FFA726',
                 tension: 0.1
             },
             {
                 label: 'Googlebot 数',
-                data: apiData.google_ips,
+                data: apiData.google_ips || [0],
                 fill: false,
                 borderColor: '#66BB6A',
                 tension: 0.1
@@ -65,7 +65,7 @@ const setChartData = async (id) => {
     // 获取存储的Token
     const token = localStorage.getItem('authToken');
     try {
-        const response = await axiosInstance.get(`http://127.0.0.1:8000/api/total/`, {
+        const response = await axiosInstance.get(`api/total/`, {
             headers: {
                 // 添加Token到请求头
                 'Authorization': `Token ${token}`

@@ -133,7 +133,7 @@ const fetchData = async () => {
   }
   websiteId.value = selectedWebSite.value.id;
   try {
-    const response = await axiosInstance.get(`http://127.0.0.1:8000/api/ip_list/${websiteId.value}/`);
+    const response = await axiosInstance.get(`api/ip_list/${websiteId.value}/`);
     ips_data.value = response.data;
     console.log('Fetched data:', ips_data.value);
   } catch (error) {

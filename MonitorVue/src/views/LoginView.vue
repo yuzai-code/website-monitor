@@ -18,32 +18,40 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import axiosInstance from '@/axiosConfig.ts'
+import { useToast } from 'primevue/usetoast';
 
 // 使用ref创建响应式引用
 const username = ref('');
 const password = ref('');
-
+const toast = useToast();
 const router = useRouter(); // 使用useRouter获取路由实例
 
 async function login() {
-    const response = await fetch('http://127.0.0.1:8000/login/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            username: username.value, // 访问ref值需要使用.value
+    try {
+        const response = await axiosInstance.post('login/', { // 注意这里使用了axiosInstance
+            username: username.value,
             password: password.value,
-        }),
-    });
+        });
 
-    if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('authToken', response.data.token);
+        toast.add({ severity: 'success', summary: '登录成功', detail: '您已成功登录' });
         console.log('Login successful');
-        router.push({ name: 'Home' }); // 使用路由实例进行导航
-    } else {
-        console.log('Login failed');
+        router.push({ name: 'Home' });
+    } catch (error) {
+
+        toast.add({ severity: 'error', summary: '登录失败', detail: '登录信息错误或服务器问题' });
+        console.error('Login failed', error);
+        if (error.response) {
+            console.log(error.response.data);
+            console.log(error.response.status);
+            console.log(error.response.headers);
+        } else if (error.request) {
+            console.log(error.request);
+        } else {
+            console.log('Error', error.message);
+        }
     }
 }
+
 </script>

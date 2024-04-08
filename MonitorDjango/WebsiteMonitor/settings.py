@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'redis',
     'rest_framework',
     'rest_framework.authtoken',
-    'django_elasticsearch_dsl',
+
     'user',
 
 ]
@@ -164,8 +164,8 @@ STATIC_URL = '/static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Celery配置
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'  # Broker配置，使用Redis作为消息中间件
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'  # BACKEND配置，这里使用redis
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/15'  # Broker配置，使用Redis作为消息中间件
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/15'  # BACKEND配置，这里使用redis
 
 # Celery Configuration Options
 CELERY_TIMEZONE = "Australia/Tasmania"

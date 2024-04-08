@@ -28,7 +28,7 @@ const fetchData = async () => {
   // 获取存储的Token
   const token = localStorage.getItem('authToken');
   try {
-    const response = await axiosInstance.get('http://127.0.0.1:8000/api/website_detail/' + websiteId + '/', {
+    const response = await axiosInstance.get('api/website_detail/' + websiteId + '/', {
       headers: {
         // 添加Token到请求头
         'Authorization': `Token ${token}`

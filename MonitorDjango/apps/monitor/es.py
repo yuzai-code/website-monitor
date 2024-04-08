@@ -22,30 +22,6 @@ class SpiderAggregation:
         s = self.helper.filter_by_user_id(s, self.user_id)
         response = s.execute()
         return response.aggregations.ip.buckets
-        # # 定义针对不同爬虫的正则表达式过滤器
-        # spider_filters = {
-        #     "google": Q("regexp", user_agent__keyword=".*Googlebot.*"),
-        #     "bing": Q("regexp", user_agent__keyword=".*bingbot.*")
-        # }
-        #
-        # # 创建过滤器聚合
-        # spiders_agg = A("filters", filters=spider_filters)
-        #
-        # # 将过滤器聚合添加到搜索查询中
-        # s.aggs.bucket("spiders", spiders_agg)
-        #
-        # # 尝试执行查询，并捕获潜在的异常
-        # try:
-        #     response = s.execute()
-        #     # 处理聚合结果
-        #     for spider_name in response.aggregations.spiders.buckets:
-        #         doc_count = response.aggregations.spiders.buckets[spider_name].doc_count
-        #         print(f"{spider_name}: {doc_count} hits")
-        #     return response.aggregations.spiders.buckets
-        # except Exception as e:
-        #     print(f"Failed to aggregate spiders: {e}")
-        #     return {}
-        #
 
 
 # 统计总的IP与访问量
