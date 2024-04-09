@@ -34,7 +34,7 @@ def task_status(request, task_id):
 
 def csrf_token(request):
     csrf = get_token(request)
-    print('11111------------', csrf)
+    # print('11111------------', csrf)
     return JsonResponse({'csrfToken': csrf})
 
 
@@ -118,9 +118,9 @@ class WebsiteListAPIView(APIView):
         return queryset
 
     def get(self, request, *args, **kwargs):
-        print("当前用户：", request.user.id)
+        # print("当前用户：", request.user.id)
         queryset = WebsiteModel.objects.filter(user_id=request.user.id)
-        print(queryset)
+        # print(queryset)
         need_nested = request.query_params.get('need_nested', 'false').lower() in ['true', '1', 'yes']
         search_text = request.query_params.get('search', '')
         if search_text:

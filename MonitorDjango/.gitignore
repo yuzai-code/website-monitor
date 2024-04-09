@@ -4,3 +4,4 @@
 /media/log
 /logs
 /.idea
+/celerybeat-schedule

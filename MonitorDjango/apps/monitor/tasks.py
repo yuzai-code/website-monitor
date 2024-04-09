@@ -9,7 +9,7 @@ from elasticsearch.helpers import bulk
 from elasticsearch_dsl import connections, Search, Index
 from rest_framework.response import Response
 
-from monitor.documents import VisitDocument
+
 
 sys.path.extend(['/home/yuzai/Desktop/WebsiteMonitor'])
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "WebsiteMonitor.settings")
