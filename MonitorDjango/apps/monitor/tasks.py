@@ -9,8 +9,6 @@ from elasticsearch.helpers import bulk
 from elasticsearch_dsl import connections, Search, Index
 from rest_framework.response import Response
 
-
-
 sys.path.extend(['/home/yuzai/Desktop/WebsiteMonitor'])
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "WebsiteMonitor.settings")
 application = get_wsgi_application()
@@ -21,10 +19,11 @@ from celery import shared_task
 from monitor.models import WebsiteModel, VisitModel, LogFileModel
 import pygrok
 from datetime import datetime, timedelta
+from WebsiteMonitor.settings import config
 
 # 建立Elasticsearch连接
 # connections.create_connection(hosts=['localhost:9200'], timeout=20)
-elasticsearch_client = connections.create_connection(hosts=['localhost:9200'], timeout=20)
+elasticsearch_client = connections.create_connection(hosts=[config['es']['ES_URL']], timeout=20)
 
 
 @shared_task(name='handle_file', queue='handle_file')

@@ -12,10 +12,16 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 import os
 import sys
 from pathlib import Path
+import configparser
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
+
+config = configparser.ConfigParser()
+# 读取文件配置
+config.read(f'{BASE_DIR}/config.ini')
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
@@ -23,7 +29,7 @@ sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 SECRET_KEY = 'django-insecure-ehmh$e6kf&k@aj2$6+j3vy0)bn^be26q_3zu23%^2e=8^8@b7='
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config['settings']['DEBUG']
 
 ALLOWED_HOSTS = ['*']
 
@@ -103,24 +109,18 @@ WSGI_APPLICATION = 'WebsiteMonitor.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',  # 数据库引擎
-        'NAME': 'monitor',  # 数据库名，Django不会帮你创建，需要自己进入数据库创建。
+        'NAME': config['postgres']['DB_NAME'],  # 数据库名，Django不会帮你创建，需要自己进入数据库创建。
         # 'NAME': 'id-latest-lotterynet-org',  # 数据库名，Django不会帮你创建，需要自己进入数据库创建。
-        'USER': 'postgres',  # 设置的数据库用户名
-        'PASSWORD': 'mypass',  # 设置的密码
+        'USER': config['postgres']['DB_USER'],  # 设置的数据库用户名
+        'PASSWORD': config['postgres']['DB_PASSWORD'],  # 设置的密码
         # 'HOST': 'postgres',
-        'HOST': 'localhost',  # 本地主机或数据库服务器的ip
-        'PORT': '5432',  # 数据库使用的端口
+        'HOST': config['postgres']['DB_HOST'],  # 本地主机或数据库服务器的ip
+        'PORT': config['postgres']['DB_PORT'],  # 数据库使用的端口
     }
 }
 
 # es配置
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': 'localhost:9200',  # todo 上线修改
-        # 'hosts': 'elasticsearch',  # todo 上线修改
-        # 'http_auth': ('username', 'password')
-    }
-}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
@@ -164,8 +164,8 @@ STATIC_URL = '/static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Celery配置
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379/15'  # Broker配置，使用Redis作为消息中间件
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/15'  # BACKEND配置，这里使用redis
+CELERY_BROKER_URL = f"{config['redis']['REDIS_URL']}/15"  # Broker配置，使用Redis作为消息中间件
+CELERY_RESULT_BACKEND = f"{config['redis']['REDIS_URL']}/15"  # BACKEND配置，这里使用redis
 
 # Celery Configuration Options
 CELERY_TIMEZONE = "Australia/Tasmania"
@@ -236,8 +236,8 @@ LOGGING = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vue开发服务器的地址
-    "http://127.0.0.1:5173",
+    f"http://localhost:{config['vue_ip']['CORS_PORT']}",  # Vue开发服务器的地址
+    f"http://127.0.0.1:{config['vue_ip']['CORS_PORT']}",
 ]
 CORS_ALLOW_HEADERS = ('*')
 

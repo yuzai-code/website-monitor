@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q, A
+from WebsiteMonitor.settings import config
 
 
 class SpiderAggregation:
@@ -13,7 +14,7 @@ class SpiderAggregation:
         self.index = index
         self.user_id = user_id
         self.helper = ElasticsearchQueryHelper(index=index)
-        self.es = Elasticsearch()
+        self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
         self.domain = domain
 
     def get_spider_aggregation(self, remote_addr):
@@ -31,7 +32,7 @@ class TotalIPVisit:
         self.index = index
         self.user_id = user_id
         self.helper = ElasticsearchQueryHelper(index=index)
-        self.es = Elasticsearch()
+        self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
         self.two_weeks_ago = datetime.now() - timedelta(weeks=2)  # 计算两周前的日期)
         self.two_weeks_ago_str = self.two_weeks_ago.strftime('%Y-%m-%dT%H:%M:%S')  # 转换为适合Elasticsearch的日期格式字符串)
         self.excluded_user_agents = [
@@ -176,7 +177,7 @@ class Aggregation:
         self.index = index
         self.user_id = user_id
         self.helper = ElasticsearchQueryHelper(index=index)
-        self.es = Elasticsearch()
+        self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
         self.domain = domain
 
     def get_ip_aggregation(self, size=None):
@@ -235,7 +236,7 @@ class Aggregation:
 class ElasticsearchQueryHelper:
     def __init__(self, index):
         self.index = index
-        self.es = Elasticsearch()
+        self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
 
     def filter_by_domain(self, search, domain=None):
         if domain:
