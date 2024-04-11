@@ -16,21 +16,12 @@
       <div class="card-upload">
         域名(选填)：
         <InputText type="text" v-model="domain" />
-      </div>
-      <div class="card-upload">
-        日志格式(必填)：
-        <InputText type="text" v-model="logFormat" list="logFormat-history" />
-        <datalist id="logFormat-history">
-          <option v-for="item in history" :value="item" :key="item"></option>
-        </datalist>
-        <Button label="清空历史" @click="clearHistory" />
-      </div>
-      <div class="upload-button-container">
         <Toast />
         <FileUpload mode="basic" ref="fileUpload" name="upload_file" url="/api/upload"
           accept=".log,application/gzip,.gz" :maxFileSize="1000000000" customUpload :auto="false" />
+        <Button label="上传" @click="submit_up" />
       </div>
-      <Button label="上传" @click="submit_up" />
+
     </div>
 
     <CardData :websiteData="websiteData" />
@@ -52,7 +43,6 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 const dates = ref()
 const selectedWebSite = ref(null)
-const progress = ref(0); // 进度条百分比
 const websiteData = ref({
   visitor_totals: 0,
   ip_totals: 0,

@@ -7,6 +7,22 @@ from utils.basemodel import BaseModel
 
 # Create your models here.
 
+class UserSettingsModel(BaseModel):
+    """
+    用户设置
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name='用户', related_name='user_settings')
+    nginx_log_format = models.TextField(verbose_name='Nginx日志格式', blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s settings"
+
+    class Meta:
+        db_table = 't_user_settings'
+        verbose_name = '用户设置'
+        verbose_name_plural = verbose_name
+
+
 class LogFileModel(BaseModel):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, verbose_name='用户', null=True, blank=True)
     website = models.ForeignKey('WebsiteModel', on_delete=models.CASCADE, verbose_name='站点', blank=True, null=True)

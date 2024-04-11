@@ -9,6 +9,7 @@
 __pycache__/
 *.pyc
 /utils/*.ini
-./config.ini
-./config_prod.ini
-celerybeat-schedule
+/config.ini
+/config_prod.ini
+/docker-compose.yml
+/Dockerfile

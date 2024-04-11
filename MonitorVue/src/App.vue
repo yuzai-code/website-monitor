@@ -3,14 +3,17 @@
     <Toast />
     <div class="sidebar" v-if="visible">
       <div class="flex flex-column h-full">
+
         <div class="flex align-items-center justify-content-between px-4 pt-3 flex-shrink-0">
-          <span class="inline-flex align-items-center gap-2">
-            <svg width="35" height="40" viewBox="0 0 35 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="..." fill="var(--primary-color-color)" />
-              <path d="..." fill="var(--text-color)" />
-            </svg>
-            <span class="font-semibold text-2xl text-primary">Website Monitor</span>
-          </span>
+
+          <div>
+            <span class="inline-flex align-items-center gap-2" @click="showUserProfile">
+              <!-- <h6>{{ username }}</h6> -->
+              <Avatar label="u" class="mr-2" size="large" style="background-color: #ece9fc; color: #2a1261" />
+              <span class="font-semibold text-2xl text-primary">Monitor</span>
+            </span>
+            <UserProfile ref="userProfileRef" :initialUsername="username" :initialNginxLogFormat="nginx_log_format" />
+          </div>
         </div>
         <div class="overflow-y-auto">
           <ul class="list-none p-0 m-0 overflow-hidden">
@@ -109,12 +112,44 @@
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import LogoutButton from '@/components/LogoutButton.vue'
-import LoginView from './views/LoginView.vue';
+import axiosInstance from '@/axiosConfig.ts'
+import Avatar from 'primevue/avatar';
+import UserProfile from '@/components/UserProfile.vue'
+
 
 const visible = ref(false) // State to control the visibility of the sidebar
+const username = ref('') // State to store the username
+const nginx_log_format = ref('') // Snginx 日志配置
+
+// 正确声明 ref
+const userProfileRef = ref();
+
+// 修改此处确保正确调用子组件方法
+const showUserProfile = () => {
+  if (userProfileRef.value) {
+    // 这里不再是 userProfileRef.value.show()，而是正确访问暴露的方法
+    userProfileRef.value.show();
+  }
+};
+
+// 异步向后端api接口发送请求
+const fetchData = async () => {
+  try {
+    const response = await axiosInstance.get('/api/user_settings/')
+
+    username.value = response.data.user
+    nginx_log_format.value = response.data.nginx_log_format
+  } catch (error) {
+    console.error('Request failed:', error)
+  }
+}
+
+onMounted(() => {
+  fetchData()
+})
 </script>
 
 <style scoped>

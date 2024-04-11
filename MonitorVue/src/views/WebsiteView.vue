@@ -44,6 +44,7 @@ const submit = async () => {
     const response = await axiosInstance.get('api/website_list/', {
       params: { search: searchText },
     })
+    console.log(response.data)
     customers.value = response.data;
   } catch (error) {
     console.error('Request failed:', error);

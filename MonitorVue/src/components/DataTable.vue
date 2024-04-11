@@ -14,8 +14,8 @@
       <Column field="data_transfer_total" header="总流量"></Column>
       <Column field="error_total" header="错误数"></Column>
       <Column field="malicious_request_total" header="恶意请求"></Column>
-      <Column field="deploy_status" header="部署"></Column>
-      <Column field="request_per_second" header="每秒请求"></Column>
+      <!-- <Column field="deploy_status" header="部署"></Column> -->
+      <!-- <Column field="request_per_second" header="每秒请求"></Column> -->
     </DataTable>
   </div>
 </template>

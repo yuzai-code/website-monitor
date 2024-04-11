@@ -50,7 +50,6 @@ INSTALLED_APPS = [
     'redis',
     'rest_framework',
     'rest_framework.authtoken',
-
     'user',
 
 ]
@@ -165,7 +164,7 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Celery配置
 CELERY_BROKER_URL = f"{config['redis']['REDIS_URL']}/15"  # Broker配置，使用Redis作为消息中间件
-CELERY_RESULT_BACKEND = f"{config['redis']['REDIS_URL']}/15"  # BACKEND配置，这里使用redis
+CELERY_RESULT_BACKEND = 'django-db'  # BACKEND配置
 
 # Celery Configuration Options
 CELERY_TIMEZONE = "Australia/Tasmania"
