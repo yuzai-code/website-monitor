@@ -34,7 +34,6 @@ def task_status(request, task_id):
 
 def csrf_token(request):
     csrf = get_token(request)
-    # print('11111------------', csrf)
     return JsonResponse({'csrfToken': csrf})
 
 
@@ -87,8 +86,8 @@ class LogUpload(APIView):
             log_file.save()
 
             # 调用celery任务
-            result = handle_uploaded_file_task.delay(log_file.id, domain)
-            # handle_uploaded_file_task(log_file.id, domain)
+            # result = handle_uploaded_file_task.delay(log_file.id, domain)
+            handle_uploaded_file_task(log_file.id, domain)
             # 获取任务id
             # task_id = result.id
 

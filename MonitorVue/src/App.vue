@@ -8,8 +8,8 @@
 
           <div>
             <span class="inline-flex align-items-center gap-2" @click="showUserProfile">
-              <!-- <h6>{{ username }}</h6> -->
-              <Avatar label="u" class="mr-2" size="large" style="background-color: #ece9fc; color: #2a1261" />
+              <Avatar :label="getAvatarLabel(username)" class="mr-2" size="large"
+                style="background-color: #ece9fc; color: #2a1261" />
               <span class="font-semibold text-2xl text-primary">Monitor</span>
             </span>
             <UserProfile ref="userProfileRef" :initialUsername="username" :initialNginxLogFormat="nginx_log_format" />
@@ -122,7 +122,7 @@ import UserProfile from '@/components/UserProfile.vue'
 
 const visible = ref(false) // State to control the visibility of the sidebar
 const username = ref('') // State to store the username
-const nginx_log_format = ref('') // Snginx 日志配置
+const nginx_log_format = ref('') // nginx 日志配置
 
 // 正确声明 ref
 const userProfileRef = ref();
@@ -142,10 +142,17 @@ const fetchData = async () => {
 
     username.value = response.data.user
     nginx_log_format.value = response.data.nginx_log_format
+
+
   } catch (error) {
     console.error('Request failed:', error)
   }
 }
+
+const getAvatarLabel = (username) => {
+  // 返回用户名的首字母作为 Avatar 的 label
+  return username.charAt(0).toUpperCase();
+};
 
 onMounted(() => {
   fetchData()

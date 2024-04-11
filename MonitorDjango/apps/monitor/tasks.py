@@ -5,6 +5,7 @@ import os
 import sys
 
 from django.core.wsgi import get_wsgi_application
+from django.db import transaction
 from elasticsearch.helpers import bulk
 from elasticsearch_dsl import connections, Search, Index
 from rest_framework.response import Response
@@ -33,6 +34,7 @@ def handle_uploaded_file_task(log_file_id, domain):
         log_file = LogFileModel.objects.get(id=log_file_id)
         file_path = log_file.upload_file.path
         nginx_format = UserSettingsModel.objects.get(user=log_file.user).nginx_log_format
+        user_id = log_file.user.id
 
         # 使用pygrok解析日志
         pattern_string = generate_nginx_regex(nginx_format)
@@ -48,11 +50,20 @@ def handle_uploaded_file_task(log_file_id, domain):
         else:
             open_func = open
 
-        with open_func(file_path, 'rt', encoding='utf-8') as file:
-            lines = file.readlines()
-        for i in range(0, len(lines), BATCH_SIZE):
-            batch_lines = lines[i:i + BATCH_SIZE]
-            process_log_batch.delay(batch_lines, domain, pattern_string, log_file.user.id)
+        # 批量处理日志文件
+        with open_func(log_file.upload_file.path, 'rt', encoding='utf-8') as file:
+            batch_lines = []
+            for line in file:
+                batch_lines.append(line)
+                if len(batch_lines) >= BATCH_SIZE:
+                    process_log_batch.delay(batch_lines, domain, pattern_string, log_file.user.id)
+                    batch_lines = []
+
+            # 处理剩余的行
+            if batch_lines:
+                process_log_batch.delay(batch_lines, domain, pattern_string, log_file.user.id)
+
+
     except LogFileModel.DoesNotExist:
         logging.error(f'文件的id不存在:{log_file_id} ')
 

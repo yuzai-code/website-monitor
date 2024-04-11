@@ -3,7 +3,7 @@ import type { AxiosInstance, AxiosRequestHeaders, AxiosResponse } from 'axios'
 
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: 'http://192.168.0.163:8001/',
-  timeout: 5000
+  timeout: 5001
 })
 
 // 请求拦截器

@@ -36,22 +36,13 @@ async function login() {
 
         localStorage.setItem('authToken', response.data.token);
         toast.add({ severity: 'success', summary: '登录成功', detail: '您已成功登录' });
-        console.log('Login successful');
         router.push({ name: 'Home' });
     } catch (error) {
-
-        toast.add({ severity: 'error', summary: '登录失败', detail: '登录信息错误或服务器问题' });
-        console.error('Login failed', error);
-        if (error.response) {
-            console.log(error.response.data);
-            console.log(error.response.status);
-            console.log(error.response.headers);
-        } else if (error.request) {
-            console.log(error.request);
+        if (error.response && error.response.status === 400) {
+            toast.add({ severity: 'error', summary: '登录失败', detail: '登陆账号密码错误' });
         } else {
-            console.log('Error', error.message);
+            toast.add({ severity: 'error', summary: '登录失败', detail: '服务器错误' });
         }
     }
 }
-
 </script>

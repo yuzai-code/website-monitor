@@ -24,10 +24,16 @@ class UserSettingsModel(BaseModel):
 
 
 class LogFileModel(BaseModel):
+    STATUS = (
+        (0, 'error'),
+        (1, 'processing'),
+        (2, 'complete'),
+    )
     user = models.ForeignKey(User, on_delete=models.SET_NULL, verbose_name='用户', null=True, blank=True)
     website = models.ForeignKey('WebsiteModel', on_delete=models.CASCADE, verbose_name='站点', blank=True, null=True)
     upload_file = models.FileField(upload_to='log', verbose_name='上传文件')
     upload_time = models.DateTimeField(auto_now_add=True, verbose_name='上传时间')
+    status = models.IntegerField(default=1, verbose_name='处理状态')
     nginx_log_format = models.CharField(max_length=600, verbose_name='Nginx日志格式', blank=True, null=True)
 
     class Meta:
