@@ -17,14 +17,12 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('index/', views.index, name='index'),
-    path('nginx_logs/', views.nginx_logs, name='nginx_logs'),
-    # path('website_stats/', views.website_stats, name='website_stats'),
 
     path('upload/', views.LogUpload.as_view(), name='log_upload'),
 
     path('website_list/', views.WebsiteListAPIView.as_view(), name='website_list'),
 
+    path('api/user_settings/', views.UserSettingsAPIView.as_view(), name='user_settings'),
     path('api/csrf_token/', views.csrf_token, name='csrf_token'),
     path('api/upload/', views.LogUpload.as_view(), name='log_upload'),
     path('api/website_list/', views.WebsiteListAPIView.as_view(), name='website_list_api'),

@@ -1,8 +1,9 @@
 from elasticsearch_dsl import Document, Text, Keyword, Integer, Date, Float
 from datetime import datetime
 
+
 class VisitDocument(Document):
-    domain = Text()
+    domain = Text(fields={'keyword': Keyword()}, fielddata=True)
     remote_addr = Keyword()
     http_x_forwarded_for = Keyword()
     user_id = Integer()

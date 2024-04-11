@@ -17,8 +17,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .es import Aggregation, SpiderAggregation, TotalIPVisit
-from .models import VisitModel, WebsiteModel, LogFileModel
+from .es import Aggregation, SpiderAggregation, TotalIPVisit, WebsiteListES
+from .models import VisitModel, WebsiteModel, LogFileModel, UserSettingsModel
 from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer
 from .tasks import handle_uploaded_file_task
 from django.http import JsonResponse
@@ -38,18 +38,34 @@ def csrf_token(request):
     return JsonResponse({'csrfToken': csrf})
 
 
-def index(request):
-    website = WebsiteModel.objects.all()
-    context = {'website': website}
-    return render(request, 'index.html', context)
+class UserSettingsAPIView(APIView):
+    """
+    # 用户设置修改
+    """
 
+    # permission_classes = [IsAuthenticated]
 
-def nginx_logs(request):
-    # 获取所有的访问信息
-    visits = VisitModel.objects.all()
-    # 将数据传递给模板
-    context = {'visits': visits}
-    return render(request, 'nginx_logs.html', context)
+    def get(self, request):
+        user_settings = UserSettingsModel.objects.filter(user=request.user).first()
+
+        if not user_settings:
+            data = {
+                'user': request.user.username,
+            }
+            return Response(data, status=status.HTTP_200_OK)
+        data = {
+            'user': request.user.username,
+            'nginx_log_format': user_settings.nginx_log_format,
+        }
+        return Response(data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        user_settings = UserSettingsModel.objects.filter(user=request.user).first()
+        if not user_settings:
+            user_settings = UserSettingsModel(user=request.user)
+        user_settings.nginx_log_format = request.data.get('nginxLogFormat')
+        user_settings.save()
+        return Response({'message': '用户设置修改成功'}, status=status.HTTP_200_OK)
 
 
 class LogUpload(APIView):
@@ -62,13 +78,11 @@ class LogUpload(APIView):
         try:
             file = self.request.FILES['upload_file']
             domain = self.request.POST.get('website', None)
-            nginx_format = self.request.POST.get('nginx_log_format')
 
             # 保存文件
             log_file = LogFileModel(
                 user=request.user,
                 upload_file=file,
-                nginx_log_format=nginx_format,
             )
             log_file.save()
 
@@ -76,10 +90,10 @@ class LogUpload(APIView):
             result = handle_uploaded_file_task.delay(log_file.id, domain)
             # handle_uploaded_file_task(log_file.id, domain)
             # 获取任务id
-            task_id = result.id
+            # task_id = result.id
 
             return Response({'message': '文件上传成功，正在后台处理',
-                             'task_id': task_id
+                             # 'task_id': task_id
                              },
                             status=status.HTTP_202_ACCEPTED)
         except Exception as e:
@@ -91,7 +105,8 @@ class WebsiteListAPIView(APIView):
     """
     获取站点列表
     """
-    permission_classes = [IsAuthenticated]
+
+    # permission_classes = [IsAuthenticated]
 
     def get_dates_range(self, dates):
         """根据传入的日期列表计算查询范围"""
@@ -119,30 +134,11 @@ class WebsiteListAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
         # print("当前用户：", request.user.id)
-        queryset = WebsiteModel.objects.filter(user_id=request.user.id)
-        # print(queryset)
-        need_nested = request.query_params.get('need_nested', 'false').lower() in ['true', '1', 'yes']
-        search_text = request.query_params.get('search', '')
-        if search_text:
-            # 模糊查询内容
-            queryset = queryset.filter(domain__icontains=search_text)
-            print(queryset)
-            serializer = MonitorSerializer(queryset, many=True)
-            return Response(serializer.data, 200)
-        # 接收input参数，而不是fields
-        input_fields = request.query_params.get('input')
-        if input_fields:
-            input_fields = input_fields.split(',')
+        website_es = WebsiteListES(index='visit', user_id=request.user.id)
+        website_list = website_es.get_website_list()
+        print('111111', website_list)
 
-        context = {
-            'need_nested': need_nested,
-            'request': request,
-        }
-
-        # 传递input_fields给序列化器
-        serializer = MonitorSerializer(queryset, many=True, context=context,
-                                       fields=input_fields if input_fields else None)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response('', status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         website_id = request.data.get('id', '')

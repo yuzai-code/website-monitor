@@ -5,6 +5,31 @@ from elasticsearch_dsl import Search, Q, A
 from WebsiteMonitor.settings import config
 
 
+class ElasticsearchQueryHelper:
+    def __init__(self, index='visit', user_id=None):
+        self.index = index
+        self.user_id = user_id
+        self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
+        self.search = Search(using=self.es, index=self.index)
+
+    def filter_by_user_id(self, search):
+        if self.user_id:
+            search = search.filter('term', user_id=self.user_id)
+        return search
+
+    def filter_by_domain(self, search, domain=None):
+        if domain:
+            search = search.filter('term', domain__keyword=domain)
+        return search
+
+    def aggregate_by_field(self, search, field, agg_name='aggregation', size=15, ):
+        search.aggs.bucket(agg_name, 'terms', field=field, size=size)
+        return search
+
+    def execute_search(self, search):
+        return search.execute()
+
+
 class SpiderAggregation:
     """
     爬虫聚合
@@ -20,7 +45,7 @@ class SpiderAggregation:
     def get_spider_aggregation(self, remote_addr):
         # 创建一个查询实例，指定使用的Elasticsearch实例和索引
         s = Search(using=self.es, index=self.index)
-        s = self.helper.filter_by_user_id(s, self.user_id)
+        s = self.helper.filter_by_user_id(s)
         response = s.execute()
         return response.aggregations.ip.buckets
 
@@ -53,25 +78,26 @@ class TotalIPVisit:
 
         # 创建搜索对象
         s = Search(using=self.es, index=self.index)
-        s = self.helper.filter_by_user_id(s, self.user_id)
+        s = self.helper.filter_by_user_id(s)
 
         s = s.query("match", http_referer="google.com")
 
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
-        # 构建排除特定用户代理和静态文件路径的查询
-        excluded_queries = [Q("regexp", user_agent=ua) for ua in self.excluded_user_agents] + static_paths
-
-        # 添加排除用户代理为空的条件
-        excluded_queries.append(~Q("exists", field="user_agent"))
+        # # 构建排除特定用户代理和静态文件路径的查询
+        # excluded_queries = [Q("regexp", user_agent=ua) for ua in self.excluded_user_agents] + static_paths
+        #
+        # # 添加排除用户代理为空的条件
+        # excluded_queries.append(~Q("exists", field="user_agent"))
 
         # 添加时间范围查询，限制为过去两周
-        date_range_query = Q('range', visit_time={'gte': self.two_weeks_ago_str})
+        # date_range_query = Q('range', visit_time={'gte': self.two_weeks_ago_str})
 
         # 将查询条件组合起来
-        query = Q('bool', must=[date_range_query], must_not=excluded_queries)
+        # query = Q('bool', must=[date_range_query], must_not=excluded_queries)
+        # query = Q('bool', must=[date_range_query])
 
         # 添加查询
-        s = s.query(query)
+        # s = s.query(query)
 
         # 定义日期直方图聚合，以visit_time字段进行按天聚合
         s.aggs.bucket(
@@ -100,7 +126,7 @@ class TotalIPVisit:
         :return:
         """
         s = Search(using=self.es, index=self.index)
-        s = self.helper.filter_by_user_id(s, self.user_id)
+        s = self.helper.filter_by_user_id(s)
         # 添加时间范围查询，限制为过去两周
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
 
@@ -140,7 +166,7 @@ class TotalIPVisit:
         """
         s = Search(using=self.es, index=self.index)
 
-        s = self.helper.filter_by_user_id(s, self.user_id)
+        s = self.helper.filter_by_user_id(s)
         # 添加时间范围查询，限制为过去两周
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
 
@@ -233,24 +259,48 @@ class Aggregation:
         return response
 
 
-class ElasticsearchQueryHelper:
-    def __init__(self, index):
-        self.index = index
-        self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
+class WebsiteListES(ElasticsearchQueryHelper):
+    """
+    网站列表
+    """
 
-    def filter_by_domain(self, search, domain=None):
-        if domain:
-            search = search.filter('term', domain__keyword=domain)
-        return search
+    def __init__(self, index, user_id):
+        super().__init__(index=index, user_id=user_id)
 
-    def filter_by_user_id(self, search, user_id=None):
-        if user_id:
-            search = search.filter('term', user_id=user_id)
-        return search
+    def get_website_list(self):
+        """
+        获取网站列表
+        :return:
+        """
+        search = self.search
+        search = search.exclude("match", user_agent="neobot")
+        search = search.exclude("match", path="*/static/*")
+        # 使用聚合计算每个网站的访问量、访客量和 IP 数
+        search.aggs.bucket('websites', 'terms', field='domain')
+        search.aggs['websites'].metric('visitor_total', 'cardinality', field='remote_addr')
+        search.aggs['websites'].metric('ip_total', 'cardinality', field='remote_addr')
+        search.aggs['websites'].metric('visit_total', 'cardinality', field='visit_time')
+        search.aggs['websites'].metric('data_transfer_total', 'sum', field='data_transfer')
+        # search.aggs['websites'].bucket('error_count', 'filter', {'match': {'status_code': 404}}).metric('error_count',
+        #                                                                                                 'value_count')
 
-    def aggregate_by_field(self, search, field, agg_name='aggregation', size=15):
-        search.aggs.bucket(agg_name, 'terms', field=field, size=size)
-        return search
+        # search.aggs['websites'].metric('malicious_request_total', 'value_count', field='malicious_request')
 
-    def execute_search(self, search):
-        return search.execute()
+        # 执行查询
+        response = search.execute()
+
+        # 提取聚合结果
+        website_statistics = []
+        for website_bucket in response.aggregations.websites.buckets:
+            website_stats = {
+                'domain': website_bucket.key,
+                'visit_total': website_bucket.visit_total.value,
+                'visitor_total': website_bucket.visitor_total.value,
+                'ip_total': website_bucket.ip_total.value,
+                'data_transfer_total': website_bucket.data_transfer_total.value,
+                # 'error_total': website_bucket.error_count.error_count.value,
+                # 'malicious_request_total': website_bucket.malicious_request_total.value
+            }
+            website_statistics.append(website_stats)
+
+        return website_statistics

@@ -16,7 +16,7 @@ import logging
 import re
 
 from celery import shared_task
-from monitor.models import WebsiteModel, VisitModel, LogFileModel
+from monitor.models import WebsiteModel, VisitModel, LogFileModel, UserSettingsModel
 import pygrok
 from datetime import datetime, timedelta
 from WebsiteMonitor.settings import config
@@ -29,12 +29,10 @@ elasticsearch_client = connections.create_connection(hosts=[config['es']['ES_URL
 @shared_task(name='handle_file', queue='handle_file')
 def handle_uploaded_file_task(log_file_id, domain):
     BATCH_SIZE = 1000  # 设置批量处理的大小
-    batch = []  # 设置批量处理队列
     try:
         log_file = LogFileModel.objects.get(id=log_file_id)
         file_path = log_file.upload_file.path
-        nginx_format = log_file.nginx_log_format
-        user = log_file.user
+        nginx_format = UserSettingsModel.objects.get(user=log_file.user).nginx_log_format
 
         # 使用pygrok解析日志
         pattern_string = generate_nginx_regex(nginx_format)
@@ -46,28 +44,27 @@ def handle_uploaded_file_task(log_file_id, domain):
         pattern_string = re.sub(r'\s+', ' ', pattern_string).strip()
         # 检查文件是否是gzip压缩文件
         if file_path.endswith('.gz'):
-            with gzip.open(file_path, 'rt', encoding='utf-8') as gz_file:
-                for line in gz_file:
-                    process_log_file(batch, line, domain, pattern_string, user)
-                    if len(batch) >= BATCH_SIZE:
-                        # 当批处理队列达到一定大小时执行批量保存
-                        bulk_save_to_elasticsearch(batch)
-                        batch = []  # 重置批量队列
-            if batch:
-                bulk_save_to_elasticsearch(batch)
+            open_func = gzip.open
         else:
-            with open(file_path, 'rb') as f:
-                for line in f:
-                    # 将读取的字节串解码为字符串
-                    decoded_line = line.decode('utf-8')
-                    process_log_file(batch, decoded_line, domain, pattern_string, user)
-                    if len(batch) >= BATCH_SIZE:
-                        bulk_save_to_elasticsearch(batch)
-                        batch = []
-            if batch:  #
-                bulk_save_to_elasticsearch(batch)
+            open_func = open
+
+        with open_func(file_path, 'rt', encoding='utf-8') as file:
+            lines = file.readlines()
+        for i in range(0, len(lines), BATCH_SIZE):
+            batch_lines = lines[i:i + BATCH_SIZE]
+            process_log_batch.delay(batch_lines, domain, pattern_string, log_file.user.id)
     except LogFileModel.DoesNotExist:
         logging.error(f'文件的id不存在:{log_file_id} ')
+
+
+@shared_task(name='process_log_batch', queue='handle_file')
+def process_log_batch(lines, domain, pattern_string, user_id):
+    batch = []
+    for line in lines:
+        process_log_file(batch, line, domain, pattern_string, user_id)
+
+    if batch:
+        bulk_save_to_elasticsearch(batch)
 
 
 def bulk_save_to_elasticsearch(documents):
@@ -82,14 +79,14 @@ def bulk_save_to_elasticsearch(documents):
         return False
 
 
-def process_log_file(batch, line, domain, pattern_string, user=None):
+def process_log_file(batch, line, domain, pattern_string, user_id=None):
     # logging.info('batch: {}'.format(batch))
     # 处理日志文件
     if domain.strip() == '':  # 如果domain为空，就从文件中的request获取
-        parse_nginx_log(batch, line, domain=None, pattern_string=pattern_string, user=user)
+        parse_nginx_log(batch, line, domain=None, pattern_string=pattern_string, user_id=user_id)
         return None
 
-    parse_nginx_log(batch, line, domain, pattern_string, user=user)
+    parse_nginx_log(batch, line, domain, pattern_string, user_id=user_id)
 
 
 def generate_document_id(*args):
@@ -100,7 +97,7 @@ def generate_document_id(*args):
     return hashlib.md5(unique_string.encode('utf-8')).hexdigest()
 
 
-def parse_nginx_log(batch, line, domain, pattern_string, user):
+def parse_nginx_log(batch, line, domain, pattern_string, user_id):
     try:
         # 使用pygrok解析日志
         grok = pygrok.Grok(pattern_string)
@@ -139,7 +136,7 @@ def parse_nginx_log(batch, line, domain, pattern_string, user):
                     domain = log.get('request').split('/')[2]
 
             # 生成文档ID
-            doc_id = generate_document_id(visit_time, remote_addr, path, user.id)
+            doc_id = generate_document_id(visit_time, remote_addr, path, user_id)
 
             # 检查文档是否存在
             search = Search(index='visit').query("match", _id=doc_id)
@@ -155,14 +152,14 @@ def parse_nginx_log(batch, line, domain, pattern_string, user):
                         "domain": domain,
                         "remote_addr": log.get('remote_addr'),
                         "http_x_forwarded_for": log.get('remote_addr'),
-                        "user_id": user.id,
+                        "user_id": user_id,
                         "path": path,
                         "visit_time": visit_time,
                         "user_agent": log.get('http_user_agent'),
                         "method": method,
                         "HTTP_protocol": HTTP_protocol,
-                        "status_code": log.get('status_code'),
-                        "data_transfer": log.get('data_transfer'),
+                        "status_code": log.get('status'),
+                        "data_transfer": log.get('body_bytes_sent'),
                         "http_referer": log.get('http_referer'),
                         "malicious_request": log.get('malicious_request'),
                         "request_time": log.get('request_time')
