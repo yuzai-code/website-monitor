@@ -100,10 +100,10 @@
 <script setup lang="ts">
 import { onMounted, ref, defineProps } from 'vue';
 import InputList from '@/components/InputList.vue';  // 确保路径正确
-import axiosInstance from '@/axiosConfig.ts'
+import axiosInstance from '@/axiosConfig'
 import Divider from 'primevue/divider';
 import Card from 'primevue/card';
-import { on } from 'events';
+
 
 const ips_data = ref({
   ips_all: [],

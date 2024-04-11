@@ -115,7 +115,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import LogoutButton from '@/components/LogoutButton.vue'
-import axiosInstance from '@/axiosConfig.ts'
+import axiosInstance from '@/axiosConfig'
 import Avatar from 'primevue/avatar';
 import UserProfile from '@/components/UserProfile.vue'
 

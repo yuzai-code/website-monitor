@@ -21,7 +21,7 @@ import { ref, defineProps } from 'vue';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
-import axiosInstance from '@/axiosConfig.ts'
+import axiosInstance from '@/axiosConfig'
 
 
 const props = defineProps({

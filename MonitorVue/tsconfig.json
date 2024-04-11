@@ -2,18 +2,44 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
-    }
+      "@/*": ["./src/*"]
+    },
+    "esModuleInterop": true,
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "types": ["vite/client"],
+    /* 基本选项 */
+
+    "lib": ["dom", "dom.iterable", "esnext"], // 编译时需要包含的库文件的列表
+    "allowJs": true, // 允许编译器编译JavaScript文件
+    "checkJs": false, // 对.js文件执行类型检查
+    "jsx": "preserve", // 在.tsx文件中支持JSX
+    "declaration": true, // 生成相应的'.d.ts'文件
+    "sourceMap": true, // 生成相应的'.map'文件
+    "outDir": "./dist", // 输出目录
+    // "strict": true, // 启用所有严格类型检查选项
+    // "noImplicitAny": true, // 不允许隐式的any类型
+    // "strictNullChecks": true, // 严格的null检查
+    "strictFunctionTypes": true, // 函数类型的严格检查
+    "strictBindCallApply": true, // 严格的bind/call/apply检查
+    "noImplicitThis": true, // 不允许this有隐式的any类型
+    "alwaysStrict": true // 以严格模式解析并为每个源文件生成"use strict"
+    /* 其他选项 */
+    // "skipLibCheck": true, // 跳过声明文件的类型检查
+    // "forceConsistentCasingInFileNames": true, // 禁止对大小写不一致的引用
+    // "resolveJsonModule": true, // 允许导入.json文件
+    // "isolatedModules": true, // 每个文件都作为一个模块进行编译
+    // "noEmit": false, // 不生成输出文件
+    // "importHelpers": true, // 从tslib导入辅助工具函数
+    // "downlevelIteration": true // 提供对ES3/ES5中不完全支持迭代的环境的支持
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
-    "src/**/*.vue"
+    "src/**/*.vue",
+    "vite-env.d.ts" // 确保你的声明文件被包含在内
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules", "**/*.test.ts"]
 }

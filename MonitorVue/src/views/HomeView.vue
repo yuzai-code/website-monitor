@@ -35,7 +35,7 @@ import { onMounted, ref } from 'vue'
 import InputList from '@/components/InputList.vue'
 import ChartData from '@/components/ChartData.vue'
 import CardData from '@/components/CardData.vue'
-import axiosInstance from '@/axiosConfig.ts'
+import axiosInstance from '@/axiosConfig'
 import moment from 'moment';
 import { useToast } from 'primevue/usetoast';
 

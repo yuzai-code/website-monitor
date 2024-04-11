@@ -87,7 +87,7 @@ import TriStateCheckbox from 'primevue/tristatecheckbox';
 
 const props = defineProps({
     WebsiteDetail: Object,
-    ip: String
+    ip: [String, Array],
 });
 
 

@@ -13,13 +13,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import axiosInstance from '@/axiosConfig.ts'
+import axiosInstance from '@/axiosConfig'
 import { useRoute } from 'vue-router'
 import Card from 'primevue/card';          // optional
 import FilterDisplay from '@/components/FilterDisplay.vue'; // optional
 
 const route = useRoute()
-const WebsiteDetail = ref([])
+const WebsiteDetail = ref({
+  'domain': '',
+})
 
 
 
