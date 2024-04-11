@@ -1,3 +1,5 @@
+__pycache__/
+*.pyc
 /monitor_venv.zip
 /test.zip
 /test/
@@ -6,9 +8,9 @@
 /.idea
 /celerybeat-schedule
 # .gitignore
-__pycache__/
-*.pyc
+
 /utils/*.ini
 ./config.ini
 ./config_prod.ini
 celerybeat-schedule
+
