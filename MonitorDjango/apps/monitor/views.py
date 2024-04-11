@@ -86,13 +86,13 @@ class LogUpload(APIView):
             log_file.save()
 
             # 调用celery任务
-            # result = handle_uploaded_file_task.delay(log_file.id, domain)
-            handle_uploaded_file_task(log_file.id, domain)
+            result = handle_uploaded_file_task.delay(log_file.id, domain)
+            # handle_uploaded_file_task(log_file.id, domain)
             # 获取任务id
-            # task_id = result.id
+            task_id = result.id
 
             return Response({'message': '文件上传成功，正在后台处理',
-                             # 'task_id': task_id
+                             'task_id': task_id
                              },
                             status=status.HTTP_202_ACCEPTED)
         except Exception as e:
