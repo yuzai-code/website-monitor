@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import axiosInstance from '@/axiosConfig.ts'
+import axiosInstance from '@/axiosConfig'
 import { useToast } from 'primevue/usetoast';
 
 // 使用ref创建响应式引用

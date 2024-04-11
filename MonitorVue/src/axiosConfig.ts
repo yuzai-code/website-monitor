@@ -1,28 +1,28 @@
-import axios, { AxiosRequestConfig, AxiosInstance, AxiosResponse } from 'axios'
+import axios from 'axios'
+import type { AxiosInstance, AxiosRequestHeaders, AxiosResponse } from 'axios'
 
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: 'http://192.168.0.163:8001/',
   timeout: 5000
 })
 
-// 添加请求拦截器
+// 请求拦截器
 axiosInstance.interceptors.request.use(
   (config: AxiosRequestConfig) => {
-    // TypeScript 3.9+ 对象展开运算符可正确推断类型，不再需要明确断言
-    const headers = config.headers || {}
+    // 使用类型断言确保 config.headers 的类型为 AxiosRequestHeaders
+    config.headers = (config.headers as AxiosRequestHeaders) || {}
 
-    // 检查当前请求的URL，判断是否是登录或注册请求
+    // 检查当前请求的 URL，判断是否是登录或注册请求
     if (!config.url?.endsWith('/login') && !config.url?.endsWith('/register/')) {
-      // 假设你的Token存储在localStorage中
+      // 假设你的 Token 存储在 localStorage 中
       const token = localStorage.getItem('authToken')
       if (token) {
         // 如果 token 存在且请求不是登录或注册，为请求头添加 Authorization
-        headers['Authorization'] = `Token ${token}`
+        config.headers['Authorization'] = `Token ${token}`
       }
     }
 
-    // 确保headers被正确设置回config对象
-    config.headers = headers
+    // 返回更新后的 config 对象
     return config
   },
   (error) => {

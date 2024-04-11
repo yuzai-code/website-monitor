@@ -17,7 +17,7 @@
 import { ref, onMounted, watch } from 'vue'
 import DataTable from '@/components/DataTable.vue'
 import InputList from '@/components/InputList.vue'
-import axiosInstance from '@/axiosConfig.ts'
+import axiosInstance from '@/axiosConfig'
 
 
 const customers = ref([])
@@ -64,10 +64,11 @@ onMounted(() => {
   submit();
 });
 // 监听 selectedItem 的变化，并根据其值调用 submit 进行搜索
-watch(selectedItem, (newValue) => {
-  // 假设输入为空时 newValue 为 null 或空字符串，这将获取所有数据
-  submit(newValue)
+watch(selectedItem, () => {
+
+  submit()
 })
+
 </script>
 
 
