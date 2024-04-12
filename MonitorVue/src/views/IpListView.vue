@@ -2,7 +2,7 @@
   <div class="container">
     <div class="calendar-container">
       网站:
-      <InputList class="input" v-model="selectedWebSite" />
+      <!-- <InputList class="input" v-model="selectedWebSite" /> -->
       <Button label="查询" @click="fetchData" />
     </div>
     <Card class="centered-title">
@@ -18,15 +18,14 @@
           <template #content>
             <p class="m-0">
               <DataTable :value="ips_data.ips_all">
-                <Column field="key" header="IP">
-                  <template #body="slotProps">
-                    <!-- 使用 websiteId 作为参数 -->
+                <Column field="ip" header="IP">
+                  <!-- <template #body="slotProps">
                     <router-link :to="{ name: 'WebsiteDetail', params: { id: websiteId, ip: slotProps.data.key } }">
                       {{ slotProps.data.key }}
                     </router-link>
-                  </template>
+                  </template> -->
                 </Column>
-                <Column field="doc_count" header="数量"></Column>
+                <Column field="count" header="数量"></Column>
               </DataTable>
 
             </p>
@@ -40,15 +39,14 @@
         <template #content>
           <p class="m-0">
             <DataTable :value="ips_data.ips_day">
-              <Column field="key" header="IP">
-                <template #body="slotProps">
-                  <!-- 使用 websiteId 作为参数 -->
+              <Column field="ip" header="IP">
+                <!-- <template #body="slotProps">
                   <router-link :to="{ name: 'WebsiteDetail', params: { id: websiteId, ip: slotProps.data.key } }">
                     {{ slotProps.data.key }}
                   </router-link>
-                </template>
+                </template> -->
               </Column>
-              <Column field="doc_count" header="数量"></Column>
+              <Column field="count" header="数量"></Column>
             </DataTable>
 
           </p>
@@ -60,15 +58,14 @@
         <template #content>
           <p class="m-0">
             <DataTable :value="ips_data.ips_hour">
-              <Column field="key" header="IP">
-                <template #body="slotProps">
-                  <!-- 使用 websiteId 作为参数 -->
+              <Column field="ip" header="IP">
+                <!-- <template #body="slotProps">
                   <router-link :to="{ name: 'WebsiteDetail', params: { id: websiteId } }">
                     {{ slotProps.data.key }}
                   </router-link>
-                </template>
+                </template> -->
               </Column>
-              <Column field="doc_count" header="数量"></Column>
+              <Column field="content" header="数量"></Column>
             </DataTable>
           </p>
         </template>
@@ -80,12 +77,12 @@
           <p class="m-0">
             <DataTable :value="ips_data.ips_min">
               <Column field="key" header="IP">
-                <template #body="slotProps">
+                <!-- <template #body="slotProps"> -->
                   <!-- 使用 websiteId 作为参数 -->
-                  <router-link :to="{ name: 'WebsiteDetail', params: { id: websiteId } }">
+                  <!-- <router-link :to="{ name: 'WebsiteDetail', params: { id: websiteId } }">
                     {{ slotProps.data.key }}
-                  </router-link>
-                </template>
+                  </router-link> -->
+                <!-- </template> -->
               </Column>
               <Column field="doc_count" header="数量"></Column>
             </DataTable>
@@ -133,7 +130,7 @@ const fetchData = async () => {
   }
   websiteId.value = selectedWebSite.value.id;
   try {
-    const response = await axiosInstance.get(`api/ip_list/${websiteId.value}/`);
+    const response = await axiosInstance.get(`api/ip_list/`);
     ips_data.value = response.data;
     console.log('Fetched data:', ips_data.value);
   } catch (error) {

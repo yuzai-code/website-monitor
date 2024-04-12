@@ -209,6 +209,11 @@ class IpAggregation:
         :return:
         """
         s = Search(using=self.es, index=self.index)
+        s = s.exclude('match', user_agent='neobot')
+        s = s.exclude('match', user_agent='Googlebot')
+        s = s.exclude('match', path='*/static/*')
+        s = s.exclude('match', path='*/media/*')
+        s = s.exclude('match', path='*/favicon.ico')
 
         # 如果有指定域名，则添加域名过滤
         if self.domain:
@@ -218,6 +223,22 @@ class IpAggregation:
             response = s.execute()
             return response.aggregations.ip.buckets
         s = self.helper.filter_by_user_id(s)
+        s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
+        response = s.execute()
+        return response.aggregations.ip.buckets
+
+    def get_10_ip_aggregation_day(self):
+        # 获取今天一天内ip数量最多的前10各
+        s = Search(using=self.es, index=self.index)
+        s = s.exclude('match', user_agent='neobot')
+        s = s.exclude('match', user_agent='Googlebot')
+        s = s.exclude('match', path='*/static/*')
+        s = s.exclude('match', path='*/media/*')
+        s = s.exclude('match', path='*/favicon.ico')
+        s = self.helper.filter_by_user_id(s)
+
+        # 将时间范围过滤调整为过去24小时
+        s = s.filter('range', **{'visit_time': {'gte': 'now-24h/h', 'lte': 'now/h'}})
         s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
         response = s.execute()
         return response.aggregations.ip.buckets
@@ -244,24 +265,14 @@ class IpAggregation:
         response = s.execute()
         return response.aggregations.ip.buckets
 
-    def get_10_ip_aggregation_day(self):
-        # 获取今天一天内ip数量最多的前10各
-        s = Search(using=self.es, index=self.index)
-        s = s.filter('term', domain__keyword=self.domain)
-        s = self.helper.filter_by_user_id(s)
-        # 将时间范围过滤调整为过去24小时  # todo 之后可以使用@timestamp
-        s = s.filter('range', **{'visit_time': {'gte': 'now-24h/h', 'lte': 'now/h'}})
-        s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
-        response = s.execute()
-        return response
 
-    def search_ip(self, ip, size=None):
-        # 根据ip查询
-        s = Search(using=self.es, index=self.index)
-        s = self.helper.filter_by_user_id(s)
-        s = s.query(Q('term', domain__keyword=self.domain) & Q('term', remote_addr=ip))
-        response = s.execute()
-        return response
+def search_ip(self, ip, size=None):
+    # 根据ip查询
+    s = Search(using=self.es, index=self.index)
+    s = self.helper.filter_by_user_id(s)
+    s = s.query(Q('term', domain__keyword=self.domain) & Q('term', remote_addr=ip))
+    response = s.execute()
+    return response
 
 
 class WebsiteListES(ElasticsearchQueryHelper):
