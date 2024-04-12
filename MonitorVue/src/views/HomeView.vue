@@ -107,8 +107,8 @@ const submit_up = async () => {
       }
       console.log(response)
       // 200为成功400为缺少nginx日志配置
-      if (response.status === 200) {
-        toast.add({ severity: 'success', summary: '上传成功', detail: '文件上传成功' });
+      if (response.status === 202) {
+        toast.add({ severity: 'success', summary: '上传成功', detail: response.data.message, life: 3000 });
       }
     } catch (error) {
 
