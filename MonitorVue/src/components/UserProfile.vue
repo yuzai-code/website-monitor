@@ -22,6 +22,7 @@ import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
 import axiosInstance from '@/axiosConfig'
+import { useToast } from 'primevue/usetoast';
 
 
 const props = defineProps({
@@ -32,6 +33,7 @@ const props = defineProps({
 const visible = ref(false);
 const username = ref(props.initialUsername);
 const nginxLogFormat = ref(props.initialNginxLogFormat);
+const toast = useToast();
 
 // 定义需要暴露给外部的属性和方法
 defineExpose({
@@ -53,15 +55,30 @@ const saveProfile = async () => {
         // 调用修改用户信息的接口
         const response = await axiosInstance.post('/api/user_settings/', data);
         if (response.status === 200) {
-            console.log('保存成功');
+            // console.log('保存成功');
+            toast.add({
+                severity: 'success',
+                summary: '保存成功',
+                detail: '个人资料已更新'
+            });
             // 保存成功后关闭对话框
             visible.value = false;
         } else {
-            console.log('保存失败');
+            // console.error('保存失败');
+            toast.add({
+                severity: 'error',
+                summary: '保存失败',
+                detail: '个人资料更新失败，请重试'
+            });
         }
 
     } catch (error) {
-        console.error('Failed to save user profile:', error);
+        // console.error('Failed to save user profile:', error);
+        toast.add({
+            severity: 'error',
+            summary: '保存失败',
+            detail: '个人资料更新失败，请重试'
+        });
     }
 
 }

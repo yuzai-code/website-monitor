@@ -4,6 +4,7 @@ import gzip
 import tempfile
 from datetime import datetime, timedelta
 
+from django.db import transaction
 from django.db.models import Count, Q, Avg, Sum, F
 from django.db.models.functions import TruncDay
 from django.http import JsonResponse
@@ -78,17 +79,20 @@ class LogUpload(APIView):
             file = self.request.FILES['upload_file']
             domain = self.request.POST.get('website', None)
 
-            # 保存文件
-            log_file = LogFileModel(
-                user=request.user,
-                upload_file=file,
-            )
-            log_file.save()
+            with transaction.atomic():
+                # 保存文件
+                log_file = LogFileModel(
+                    user=request.user,
+                    upload_file=file,
+                )
+                log_file.save()
+
+
             log_file = LogFileModel.objects.get(id=log_file.id)
             file_path = log_file.upload_file.path
             user_settins = UserSettingsModel.objects.filter(user=request.user).first()
             if not user_settins:
-                return Response({'message': '请先设置nginx日志格式'}, status=400)
+                return Response({'message': '请先设置nginx日志格式'}, status=status.HTTP_401_UNAUTHORIZED)
             nginx_format = user_settins.nginx_log_format
             user_id = log_file.user.id
             # 调用celery任务
@@ -103,7 +107,7 @@ class LogUpload(APIView):
                             status=status.HTTP_202_ACCEPTED)
         except Exception as e:
             print(e)
-            return Response({'message': f'文件上传失败: {str(e)}'}, status=400)
+            return Response({'message': f'文件上传失败: {str(e)}'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class WebsiteListAPIView(APIView):

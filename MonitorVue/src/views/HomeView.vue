@@ -112,7 +112,7 @@ const submit_up = async () => {
       }
     } catch (error) {
 
-      if (error.response.status === 400) {
+      if (error.response.status === 401) {
         toast.add({ severity: 'error', summary: '上传失败', detail: '缺少nginx日志配置', life: 3000 });
       } else {
         toast.add({ severity: 'error', summary: '上传失败', detail: '文件上传失败，请重试', life: 3000 });

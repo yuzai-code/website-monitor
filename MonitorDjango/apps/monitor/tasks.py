@@ -28,10 +28,9 @@ elasticsearch_client = connections.create_connection(hosts=[config['es']['ES_URL
 
 
 @shared_task(name='handle_file', queue='handle_file')
-def handle_uploaded_file_task(nginx_format, file_path,user_id,domain):
+def handle_uploaded_file_task(nginx_format, file_path, user_id, domain):
     BATCH_SIZE = 1000  # 设置批量处理的大小
     try:
-
 
         # 使用pygrok解析日志
         pattern_string = generate_nginx_regex(nginx_format)
