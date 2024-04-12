@@ -105,13 +105,18 @@ const submit_up = async () => {
           localStorage.setItem('logFormatHistory', JSON.stringify(logFormatHistory));
         }
       }
-      // 成功的Toast通知
-      // console.log('上传成功:', response.data);
-      toast.add({ severity: 'success', summary: '上传成功', detail: '文件已成功上传', life: 3000 });
+      console.log(response)
+      // 200为成功400为缺少nginx日志配置
+      if (response.status === 200) {
+        toast.add({ severity: 'success', summary: '上传成功', detail: '文件上传成功' });
+      }
     } catch (error) {
-      // console.error('上传失败:', error);
-      toast.add({ severity: 'error', summary: '上传失败', detail: '文件上传失败，请重试', life: 3000 });
 
+      if (error.response.status === 400) {
+        toast.add({ severity: 'error', summary: '上传失败', detail: '缺少nginx日志配置', life: 3000 });
+      } else {
+        toast.add({ severity: 'error', summary: '上传失败', detail: '文件上传失败，请重试', life: 3000 });
+      }
       // 失败的Toast通知
     }
   } else {

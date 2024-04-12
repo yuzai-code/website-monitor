@@ -38,7 +38,7 @@ class SpiderAggregation:
     def __init__(self, index, domain, user_id):
         self.index = index
         self.user_id = user_id
-        self.helper = ElasticsearchQueryHelper(index=index)
+        self.helper = ElasticsearchQueryHelper(index=index,user_id=user_id)
         self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
         self.domain = domain
 
@@ -56,7 +56,7 @@ class TotalIPVisit:
     def __init__(self, index, user_id):
         self.index = index
         self.user_id = user_id
-        self.helper = ElasticsearchQueryHelper(index=index)
+        self.helper = ElasticsearchQueryHelper(index=index, user_id=user_id)
         self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
         self.two_weeks_ago = datetime.now() - timedelta(weeks=2)  # 计算两周前的日期)
         self.two_weeks_ago_str = self.two_weeks_ago.strftime('%Y-%m-%dT%H:%M:%S')  # 转换为适合Elasticsearch的日期格式字符串)
@@ -202,7 +202,7 @@ class Aggregation:
     def __init__(self, index, domain=None, user_id=None):
         self.index = index
         self.user_id = user_id
-        self.helper = ElasticsearchQueryHelper(index=index)
+        self.helper = ElasticsearchQueryHelper(index=index, user_id=user_id)
         self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
         self.domain = domain
 
@@ -212,7 +212,7 @@ class Aggregation:
 
         if self.domain:
             s = s.filter('term', domain__keyword=self.domain)
-        s = self.helper.filter_by_user_id(s, self.user_id)
+        s = self.helper.filter_by_user_id(s)
         s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
         response = s.execute()
         return response.aggregations.ip.buckets
@@ -221,7 +221,7 @@ class Aggregation:
         # 获取过去5分钟内ip数量最多的前10个
         s = Search(using=self.es, index=self.index)
         s = s.filter('term', domain__keyword=self.domain)
-        s = self.helper.filter_by_user_id(s, self.user_id)
+        s = self.helper.filter_by_user_id(s)
         s = s.filter('range', **{'visit_time': {
             'gte': 'now-5m/m', 'lte': 'now/m'
         }})
@@ -233,7 +233,7 @@ class Aggregation:
         # 获取过去一个小时内ip数量最多的前10个
         s = Search(using=self.es, index=self.index)
         s = s.filter('term', domain__keyword=self.domain)
-        s = self.helper.filter_by_user_id(s, self.user_id)
+        s = self.helper.filter_by_user_id(s)
         s = s.filter('range', **{'visit_time': {'gte': 'now-1h', 'lte': 'now'}})
         s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
         response = s.execute()
@@ -243,7 +243,7 @@ class Aggregation:
         # 获取今天一天内ip数量最多的前10各
         s = Search(using=self.es, index=self.index)
         s = s.filter('term', domain__keyword=self.domain)
-        s = self.helper.filter_by_user_id(s, self.user_id)
+        s = self.helper.filter_by_user_id(s)
         # 将时间范围过滤调整为过去24小时  # todo 之后可以使用@timestamp
         s = s.filter('range', **{'visit_time': {'gte': 'now-24h/h', 'lte': 'now/h'}})
         s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
@@ -253,7 +253,7 @@ class Aggregation:
     def search_ip(self, ip, size=None):
         # 根据ip查询
         s = Search(using=self.es, index=self.index)
-        s = self.helper.filter_by_user_id(s, self.user_id)
+        s = self.helper.filter_by_user_id(s)
         s = s.query(Q('term', domain__keyword=self.domain) & Q('term', remote_addr=ip))
         response = s.execute()
         return response

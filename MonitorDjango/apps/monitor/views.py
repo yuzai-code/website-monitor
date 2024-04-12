@@ -84,9 +84,15 @@ class LogUpload(APIView):
                 upload_file=file,
             )
             log_file.save()
-
+            log_file = LogFileModel.objects.get(id=log_file.id)
+            file_path = log_file.upload_file.path
+            user_settins = UserSettingsModel.objects.filter(user=request.user).first()
+            if not user_settins:
+                return Response({'message': '请先设置nginx日志格式'}, status=400)
+            nginx_format = user_settins.nginx_log_format
+            user_id = log_file.user.id
             # 调用celery任务
-            result = handle_uploaded_file_task.delay(log_file.id, domain)
+            result = handle_uploaded_file_task.delay(nginx_format, file_path, user_id, domain)
             # handle_uploaded_file_task(log_file.id, domain)
             # 获取任务id
             task_id = result.id

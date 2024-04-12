@@ -28,13 +28,10 @@ elasticsearch_client = connections.create_connection(hosts=[config['es']['ES_URL
 
 
 @shared_task(name='handle_file', queue='handle_file')
-def handle_uploaded_file_task(log_file_id, domain):
+def handle_uploaded_file_task(nginx_format, file_path,user_id,domain):
     BATCH_SIZE = 1000  # 设置批量处理的大小
     try:
-        log_file = LogFileModel.objects.get(id=log_file_id)
-        file_path = log_file.upload_file.path
-        nginx_format = UserSettingsModel.objects.get(user=log_file.user).nginx_log_format
-        user_id = log_file.user.id
+
 
         # 使用pygrok解析日志
         pattern_string = generate_nginx_regex(nginx_format)
@@ -51,17 +48,17 @@ def handle_uploaded_file_task(log_file_id, domain):
             open_func = open
 
         # 批量处理日志文件
-        with open_func(log_file.upload_file.path, 'rt', encoding='utf-8') as file:
+        with open_func(file_path, 'rt', encoding='utf-8') as file:
             batch_lines = []
             for line in file:
                 batch_lines.append(line)
                 if len(batch_lines) >= BATCH_SIZE:
-                    process_log_batch.delay(batch_lines, domain, pattern_string, log_file.user.id)
+                    process_log_batch.delay(batch_lines, domain, pattern_string, user_id)
                     batch_lines = []
 
             # 处理剩余的行
             if batch_lines:
-                process_log_batch.delay(batch_lines, domain, pattern_string, log_file.user.id)
+                process_log_batch.delay(batch_lines, domain, pattern_string, user_id)
 
 
     except LogFileModel.DoesNotExist:
