@@ -18,7 +18,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .es import Aggregation, SpiderAggregation, TotalIPVisit, WebsiteListES
+from .es import IpAggregation, SpiderAggregation, TotalIPVisit, WebsiteListES
 from .models import VisitModel, WebsiteModel, LogFileModel, UserSettingsModel
 from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer
 from .tasks import handle_uploaded_file_task
@@ -87,9 +87,9 @@ class LogUpload(APIView):
                 )
                 log_file.save()
 
-
             log_file = LogFileModel.objects.get(id=log_file.id)
-            file_path = log_file.upload_file.path
+            file_name = log_file.upload_file.name
+            file_path = f'/home/yuzai/Project/website-monitor/MonitorDjango/media/{file_name}'
             user_settins = UserSettingsModel.objects.filter(user=request.user).first()
             if not user_settins:
                 return Response({'message': '请先设置nginx日志格式'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -145,9 +145,8 @@ class WebsiteListAPIView(APIView):
         # print("当前用户：", request.user.id)
         website_es = WebsiteListES(index='visit', user_id=request.user.id)
         website_list = website_es.get_website_list()
-        print('111111', website_list)
 
-        return Response('', status=status.HTTP_200_OK)
+        return Response(website_list, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         website_id = request.data.get('id', '')
@@ -251,51 +250,47 @@ class ChartDataAPIView(APIView):
 
 
 class IpListAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    @staticmethod
-    def get_object(pk, user):
-        try:
-            website = WebsiteModel.objects.get(pk=pk, user=user)
-            return website
-        except WebsiteModel.DoesNotExist:
-            return
+    # permission_classes = [IsAuthenticated]
 
     def to_serializer(self, ip_aggregation):
         ips_data = [{'key': bucket.key, 'doc_count': bucket.doc_count} for bucket in ip_aggregation]
         return ips_data
 
-    def get(self, request, pk):
-        obj = self.get_object(pk, user=self.request.user)
-        if not obj:
-            return Response(data={"msg": "没有此域名信息"}, status=status.HTTP_404_NOT_FOUND)
+    def get(self, request, *args, **kwargs):
+        domain = request.GET.get('domain', '')
+        print('domain', domain)
+        user_id = request.user.id
 
-        # 调用es聚合查询所有ip的数量
-        aggre = Aggregation(index='visit', domain=obj.domain, user_id=self.request.user.id)
-        ips_aggregation_all = aggre.get_ip_aggregation()
-        ips_all = self.to_serializer(ips_aggregation_all)
+        if domain:
+            # 调用es查询域名下的ip
+            aggre = IpAggregation(index='visit', domain=domain, user_id=user_id)
+            ips_aggregation = aggre.get_ip_aggregation()
+            print(ips_aggregation)
 
-        # 查询过去5分钟内ip数量最多的前10个
-        ips_aggregation_min = aggre.get_10_ip_aggregation_min()
-        ips_min = self.to_serializer(ips_aggregation_min)
+        # ips_aggregation_all = aggre.get_ip_aggregation()
+        # ips_all = self.to_serializer(ips_aggregation_all)
+        #
+        # # 查询过去5分钟内ip数量最多的前10个
+        # ips_aggregation_min = aggre.get_10_ip_aggregation_min()
+        # ips_min = self.to_serializer(ips_aggregation_min)
+        #
+        # # 查询过去1小时内ip数量最多的前10个
+        # ips_aggregation_hour = aggre.get_10_ip_aggregation_hour()
+        # ips_hour = self.to_serializer(ips_aggregation_hour)
+        #
+        # # 查询过去1天内ip数量最多的前10个
+        # ips_aggregation_day = aggre.get_10_ip_aggregation_day()
+        # ips_day = self.to_serializer(ips_aggregation_day)
+        # print(ips_aggregation_day)
+        #
+        # data = {
+        #     'ips_all': ips_all,
+        #     'ips_min': ips_min,
+        #     'ips_hour': ips_hour,
+        #     'ips_day': ips_day
+        # }
 
-        # 查询过去1小时内ip数量最多的前10个
-        ips_aggregation_hour = aggre.get_10_ip_aggregation_hour()
-        ips_hour = self.to_serializer(ips_aggregation_hour)
-
-        # 查询过去1天内ip数量最多的前10个
-        ips_aggregation_day = aggre.get_10_ip_aggregation_day()
-        ips_day = self.to_serializer(ips_aggregation_day)
-        print(ips_aggregation_day)
-
-        data = {
-            'ips_all': ips_all,
-            'ips_min': ips_min,
-            'ips_hour': ips_hour,
-            'ips_day': ips_day
-        }
-
-        return Response(data, status=status.HTTP_200_OK)
+        return Response('', status=status.HTTP_200_OK)
 
 
 class SpiderAPIView(APIView):

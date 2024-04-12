@@ -63,6 +63,8 @@ const saveProfile = async () => {
             });
             // 保存成功后关闭对话框
             visible.value = false;
+            // 刷新页面
+            location.reload();
         } else {
             // console.error('保存失败');
             toast.add({

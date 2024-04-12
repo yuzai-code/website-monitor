@@ -2,18 +2,18 @@
   <div class="card">
     <DataTable :value="customers" paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]" tableStyle="min-width: 50rem">
       <Column field="domain" header="网站">
-        <template #body="slotProps">
+        <!-- <template #body="slotProps">
           <router-link :to="{ name: 'WebsiteDetail', params: { id: slotProps.data.id } }">
             {{ slotProps.data.domain }}
           </router-link>
-        </template>
+        </template> -->
       </Column>
-      <Column field="visit_total" header="访问量"></Column>
-      <Column field="visitor_total" header="访客量"></Column>
-      <Column field="ip_total" header="IP数"></Column>
-      <Column field="data_transfer_total" header="总流量"></Column>
-      <Column field="error_total" header="错误数"></Column>
-      <Column field="malicious_request_total" header="恶意请求"></Column>
+      <Column field="visits" header="访问量"></Column>
+      <!-- <Column field="visitor_total" header="访客量"></Column> -->
+      <Column field="ips" header="IP数"></Column>
+      <Column field="data_transfers" header="总流量"></Column>
+      <!-- <Column field="error_total" header="错误数"></Column> -->
+      <!-- <Column field="malicious_request_total" header="恶意请求"></Column> -->
       <!-- <Column field="deploy_status" header="部署"></Column> -->
       <!-- <Column field="request_per_second" header="每秒请求"></Column> -->
     </DataTable>

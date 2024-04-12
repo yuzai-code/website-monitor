@@ -3,7 +3,7 @@
     <div class="calendar-container">
       <label class="label">网站：</label>
       <div class="card flex justify-content-center">
-        <InputList class="input" v-model="selectedItem" @update:selectedItem="selectedItem = $event" />
+        <!-- <InputList class="input" v-model="selectedItem" @update:selectedItem="selectedItem = $event" /> -->
       </div>
 
       <Button label="查询" @click="submit" />
@@ -22,7 +22,7 @@ import axiosInstance from '@/axiosConfig'
 
 const customers = ref([])
 const selectedItem = ref(null);
-
+const lastSortValue = ref(null);
 
 
 const submit = async () => {
@@ -34,18 +34,13 @@ const submit = async () => {
     searchText = selectedItem.value; // 否则，直接使用selectedItem的值
   }
 
-  // 保存到sessionStorage
-  sessionStorage.setItem('selectedItem', JSON.stringify(selectedItem.value));
-
-  // 获取存储的Token
-  const token = localStorage.getItem('authToken');
 
   try {
-    const response = await axiosInstance.get('api/website_list/', {
-      params: { search: searchText },
-    })
-    console.log(response.data)
+    const response = await axiosInstance.get('api/website_list/',)
     customers.value = response.data;
+    lastSortValue.value = response.data.last_sort_value;
+
+
   } catch (error) {
     console.error('Request failed:', error);
   }

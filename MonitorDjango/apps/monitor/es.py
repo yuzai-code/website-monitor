@@ -22,10 +22,6 @@ class ElasticsearchQueryHelper:
             search = search.filter('term', domain__keyword=domain)
         return search
 
-    def aggregate_by_field(self, search, field, agg_name='aggregation', size=15, ):
-        search.aggs.bucket(agg_name, 'terms', field=field, size=size)
-        return search
-
     def execute_search(self, search):
         return search.execute()
 
@@ -38,7 +34,7 @@ class SpiderAggregation:
     def __init__(self, index, domain, user_id):
         self.index = index
         self.user_id = user_id
-        self.helper = ElasticsearchQueryHelper(index=index,user_id=user_id)
+        self.helper = ElasticsearchQueryHelper(index=index, user_id=user_id)
         self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
         self.domain = domain
 
@@ -198,7 +194,7 @@ class TotalIPVisit:
 
 
 # ip聚合
-class Aggregation:
+class IpAggregation:
     def __init__(self, index, domain=None, user_id=None):
         self.index = index
         self.user_id = user_id
@@ -207,11 +203,20 @@ class Aggregation:
         self.domain = domain
 
     def get_ip_aggregation(self, size=None):
-        # 聚合ip查询
+        """
+        ip访问次数最多的前15个
+        :param size:
+        :return:
+        """
         s = Search(using=self.es, index=self.index)
 
+        # 如果有指定域名，则添加域名过滤
         if self.domain:
             s = s.filter('term', domain__keyword=self.domain)
+            s = self.helper.filter_by_user_id(s)
+            s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
+            response = s.execute()
+            return response.aggregations.ip.buckets
         s = self.helper.filter_by_user_id(s)
         s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
         response = s.execute()
@@ -248,7 +253,7 @@ class Aggregation:
         s = s.filter('range', **{'visit_time': {'gte': 'now-24h/h', 'lte': 'now/h'}})
         s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
         response = s.execute()
-        return response.aggregations.ip.buckets
+        return response
 
     def search_ip(self, ip, size=None):
         # 根据ip查询
@@ -272,35 +277,47 @@ class WebsiteListES(ElasticsearchQueryHelper):
         获取网站列表
         :return:
         """
+        data_list = []
         search = self.search
         search = search.exclude("match", user_agent="neobot")
+        search = search.exclude("match", user_agent="Googlebot")
         search = search.exclude("match", path="*/static/*")
-        # 使用聚合计算每个网站的访问量、访客量和 IP 数
-        search.aggs.bucket('websites', 'terms', field='domain')
-        search.aggs['websites'].metric('visitor_total', 'cardinality', field='remote_addr')
-        search.aggs['websites'].metric('ip_total', 'cardinality', field='remote_addr')
-        search.aggs['websites'].metric('visit_total', 'cardinality', field='visit_time')
-        search.aggs['websites'].metric('data_transfer_total', 'sum', field='data_transfer')
-        # search.aggs['websites'].bucket('error_count', 'filter', {'match': {'status_code': 404}}).metric('error_count',
-        #                                                                                                 'value_count')
+        search = search.exclude("match", path="*/media/*")
+        search = search.exclude("match", path="*/favicon.ico")
 
-        # search.aggs['websites'].metric('malicious_request_total', 'value_count', field='malicious_request')
+        # 按照domain字段进行分组
+        search.aggs.bucket('domain', 'terms', field='domain.keyword', size=5000) \
+            .metric('ips', 'cardinality', field='remote_addr') \
+            .metric('data_transfers', 'sum', field='data_transfer')
 
-        # 执行查询
-        response = search.execute()
+        search = search.source(['domain', 'remote_addr', 'data_transfer'])
 
-        # 提取聚合结果
-        website_statistics = []
-        for website_bucket in response.aggregations.websites.buckets:
-            website_stats = {
-                'domain': website_bucket.key,
-                'visit_total': website_bucket.visit_total.value,
-                'visitor_total': website_bucket.visitor_total.value,
-                'ip_total': website_bucket.ip_total.value,
-                'data_transfer_total': website_bucket.data_transfer_total.value,
-                # 'error_total': website_bucket.error_count.error_count.value,
-                # 'malicious_request_total': website_bucket.malicious_request_total.value
-            }
-            website_statistics.append(website_stats)
+        response = self.execute_search(search)
 
-        return website_statistics
+        # 获取聚合结果
+        aggs = response.aggregations.domain
+
+        # 遍历输出每个不同的域名
+        for bucket in aggs.buckets:
+            domain = bucket.key
+            ips = bucket.ips.value
+            data_list.append({
+                'domain': domain,
+                'ips': ips,
+                'visits': bucket.doc_count,
+                'data_transfers': bucket.data_transfers.value,
+            })
+
+        return data_list
+
+    def get_website_detail(self, domain):
+        """
+        获取网站详细信息
+        :param domain:
+        :return:
+        """
+        search = self.search
+        search = self.filter_by_domain(search, domain)
+        search.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
+        response = self.execute_search(search)
+        return response.aggregations.ip.buckets

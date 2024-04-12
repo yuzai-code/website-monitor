@@ -20,4 +20,4 @@ RUN pip install --upgrade pip \
 EXPOSE 8000
 
 # 运行Django服务
-CMD sh -c 'python manage.py runserver 0.0.0.0:8000 & celery -A WebsiteMonitor worker --loglevel=info -P gevent -Q handle_file'
+CMD sh -c 'python manage.py runserver 0.0.0.0:8000'
