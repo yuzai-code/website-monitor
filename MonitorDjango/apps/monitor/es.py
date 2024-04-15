@@ -6,7 +6,7 @@ from WebsiteMonitor.settings import config
 
 
 class ElasticsearchQueryHelper:
-    def __init__(self, index='test_new', user_id=None):
+    def __init__(self, index='visit_new', user_id=None):
         self.index = index
         self.user_id = user_id
         self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])

@@ -146,7 +146,7 @@ class WebsiteListAPIView(APIView):
         after_key = request.query_params.get('after_key')
         domain = request.query_params.get('search_text')
         print('domain', domain)
-        website_es = WebsiteListES(index='visit', user_id=request.user.id)
+        website_es = WebsiteListES(index='visit_new', user_id=request.user.id)
         if domain:
             website = website_es.get_website_list(domain=domain, after_key=after_key)
             data = {
@@ -277,7 +277,7 @@ class IpListAPIView(APIView):
         print(user_id)
         if domain:
             # 调用es查询域名下的ip
-            aggre = IpAggregation(index='visit', domain=domain, user_id=user_id)
+            aggre = IpAggregation(index='visit_new', domain=domain, user_id=user_id)
             # 所有
             ips_aggregation = aggre.get_ip_aggregation()
             ips_all = self.to_serializer(ips_aggregation)
@@ -289,7 +289,7 @@ class IpListAPIView(APIView):
                 'ips_day': ips_day,
             }
             return Response(data, status=status.HTTP_200_OK)
-        aggre = IpAggregation(index='visit', user_id=user_id)
+        aggre = IpAggregation(index='visit_new', user_id=user_id)
         # 所有
         ips_aggregation = aggre.get_ip_aggregation()
         ips_all = self.to_serializer(ips_aggregation)
@@ -321,7 +321,7 @@ class SpiderAPIView(APIView):
 
     def get(self, request, pk, *args, **kwargs):
         website = self.get_object(pk=pk, user=self.request.user)
-        spider_aggregation = SpiderAggregation(index='visit', domain=website.domain)
+        spider_aggregation = SpiderAggregation(index='visit_new', domain=website.domain)
         get_spider_aggregatio = spider_aggregation.get_spider_aggregation()
         print(get_spider_aggregatio)
         return Response(list(get_spider_aggregatio), status=status.HTTP_200_OK)
@@ -346,7 +346,7 @@ class TotalIpVisit(APIView):
         return date, count
 
     def get(self, request):
-        total = TotalIPVisit(index='visit', user_id=self.request.user.id)
+        total = TotalIPVisit(index='visit_new', user_id=self.request.user.id)
         visit_date, visit_count = self.to_serailizer(total.total_visit())
         es_ips = total.total_ip()
         ip_date = [bucket.key_as_string for bucket in es_ips]
