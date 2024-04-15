@@ -3,7 +3,7 @@
     <div class="calendar-container">
       <label class="label">网站：</label>
       <div class="card flex justify-content-center">
-        <!-- <InputList class="input" v-model="selectedItem" @update:selectedItem="selectedItem = $event" /> -->
+        <AutoComplete v-model="value" dropdown :suggestions="items" @complete="search" />
       </div>
 
       <Button label="查询" @click="submit" />
@@ -16,13 +16,29 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import DataTable from '@/components/DataTable.vue'
-import InputList from '@/components/InputList.vue'
+import InputList from 'primevue/inputtext'
 import axiosInstance from '@/axiosConfig'
 
 
 const customers = ref([])
-const selectedItem = ref(null);
 const afterKey = ref(null);
+const value = ref("");
+const items = ref([]);
+
+const search = async (event) => {
+  console.log('Search:', event.query);
+  try {
+    const response = await axiosInstance.get('api/website_list/', {
+      params: {
+        search_text: event.query
+      }
+    })
+    items.value = response.data.website_list.map((item) => item.domain);
+    customers.value = response.data.website_list;
+  } catch (error) {
+    // console.error('Request failed:', error);
+  }
+}
 
 const handleLastPageReached = () => {
   // 当 DataTable 组件触发 reach-last-page 事件时，调用此函数
@@ -32,19 +48,12 @@ const handleLastPageReached = () => {
 };
 
 const submit = async () => {
-  let searchText;
-  // 检查selectedItem是对象还是字符串
-  if (typeof selectedItem.value === 'object' && selectedItem.value !== null) {
-    searchText = selectedItem.value.domain; // 如果是对象，则使用domain属性
-  } else {
-    searchText = selectedItem.value; // 否则，直接使用selectedItem的值
-  }
-
 
   try {
     const response = await axiosInstance.get('api/website_list/', {
       params: {
-        after_key: afterKey.value
+        after_key: afterKey.value,
+        search_text: value.value
       }
     })
     console.log('Response:', response.data);
@@ -54,27 +63,16 @@ const submit = async () => {
     afterKey.value = response.data.after_key;
     console.log(afterKey.value);
   } catch (error) {
-    console.error('Request failed:', error);
+    // console.error('Request failed:', error);
   }
 }
 
 // 页面加载时，不带搜索词调用 submit 获取所有数据
 onMounted(() => {
-  // 尝试从 sessionStorage 恢复 selectedItem 的值
-  const savedItem = sessionStorage.getItem('selectedItem');
-  if (savedItem) {
-    selectedItem.value = JSON.parse(savedItem);
-    // 因为 selectedItem 可能是对象或字符串，根据保存时的格式恢复
-  }
-
-  // 页面加载时调用 submit 获取数据，可能使用恢复的 selectedItem 进行搜索
   submit();
 });
-// 监听 selectedItem 的变化，并根据其值调用 submit 进行搜索
-watch(selectedItem, () => {
 
-  submit()
-})
+
 
 </script>
 
