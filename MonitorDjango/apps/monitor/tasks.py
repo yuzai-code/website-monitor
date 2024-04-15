@@ -141,14 +141,14 @@ def parse_nginx_log(batch, line, domain, pattern_string, user_id):
             doc_id = generate_document_id(visit_time, remote_addr, path, user_id)
 
             # 检查文档是否存在
-            search = Search(index='visit').query("match", _id=doc_id)
+            search = Search(index='visit_new').query("match", _id=doc_id)
             response = search.execute()
             if not response.hits:
                 # 如果文档不存在，则创建并保存新文档
                 # 创建文档而不是立即保存
                 visit_document = {
                     "_op_type": "index",
-                    "_index": "visit",
+                    "_index": "visit_new",
                     "_id": doc_id,
                     "_source": {
                         "domain": domain,
