@@ -283,10 +283,13 @@ class WebsiteListES(ElasticsearchQueryHelper):
     def __init__(self, index, user_id):
         super().__init__(index=index, user_id=user_id)
 
-    def get_website_list(self):
+    def get_website_list(self, page=1, page_size=1000, after_key=None):
         """
         获取网站列表
-        :return:
+        :param page: 当前页码
+        :param page_size: 每页数据量
+        :param after_key: 用于composite aggregation的分页键
+        :return: 当前页的网站列表数据和下一页的键
         """
         data_list = []
         search = self.search
@@ -296,30 +299,43 @@ class WebsiteListES(ElasticsearchQueryHelper):
         search = search.exclude("match", path="*/media/*")
         search = search.exclude("match", path="*/favicon.ico")
 
-        # 按照domain字段进行分组
-        search.aggs.bucket('domain', 'terms', field='domain.keyword', size=5000) \
+        search = self.filter_by_user_id(search)
+
+        # 使用Composite Aggregation
+        composite_agg = {
+            "sources": [
+                {"domain": {"terms": {"field": "domain.keyword"}}}
+            ],
+            "size": page_size
+        }
+
+        if after_key:
+            composite_agg['after'] = after_key  # 用于继续从上一次的最后位置开始
+        print('1111', after_key)
+        search.aggs.bucket('by_domain', 'composite', **composite_agg) \
             .metric('ips', 'cardinality', field='remote_addr') \
             .metric('data_transfers', 'sum', field='data_transfer')
-
-        search = search.source(['domain', 'remote_addr', 'data_transfer'])
 
         response = self.execute_search(search)
 
         # 获取聚合结果
-        aggs = response.aggregations.domain
+        aggs = response.aggregations.by_domain
 
-        # 遍历输出每个不同的域名
         for bucket in aggs.buckets:
-            domain = bucket.key
+            domain = bucket.key.domain
             ips = bucket.ips.value
+            data_transfers = bucket.data_transfers.value
             data_list.append({
                 'domain': domain,
                 'ips': ips,
+                'data_transfers': data_transfers,
                 'visits': bucket.doc_count,
-                'data_transfers': bucket.data_transfers.value,
             })
 
-        return data_list
+        # 检查是否有更多页
+        after_key = aggs.after_key if 'after_key' in aggs else None
+        print('222', after_key)
+        return data_list, after_key
 
     def get_website_detail(self, domain):
         """

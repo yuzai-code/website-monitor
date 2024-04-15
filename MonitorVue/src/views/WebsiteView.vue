@@ -10,7 +10,7 @@
 
     </div>
 
-    <DataTable :customers="customers" />
+    <DataTable :customers="customers" @reach-last-page="handleLastPageReached" />
   </div>
 </template>
 <script setup lang="ts">
@@ -22,8 +22,14 @@ import axiosInstance from '@/axiosConfig'
 
 const customers = ref([])
 const selectedItem = ref(null);
-const lastSortValue = ref(null);
+const afterKey = ref(null);
 
+const handleLastPageReached = () => {
+  // 当 DataTable 组件触发 reach-last-page 事件时，调用此函数
+  console.log('Last page reached,12312312');
+  // 用于加载下一页数据
+  submit();
+};
 
 const submit = async () => {
   let searchText;
@@ -36,11 +42,17 @@ const submit = async () => {
 
 
   try {
-    const response = await axiosInstance.get('api/website_list/',)
-    customers.value = response.data;
-    lastSortValue.value = response.data.last_sort_value;
-
-
+    const response = await axiosInstance.get('api/website_list/', {
+      params: {
+        after_key: afterKey.value
+      }
+    })
+    console.log('Response:', response.data);
+    const newData = response.data.website_list;
+    // 将新获取的数据与已有的数据拼接起来
+    customers.value = customers.value.concat(newData);
+    afterKey.value = response.data.after_key;
+    console.log(afterKey.value);
   } catch (error) {
     console.error('Request failed:', error);
   }

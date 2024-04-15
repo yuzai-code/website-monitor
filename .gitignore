@@ -1,2 +1,6 @@
 MonitorDjango/config_prod.ini
 MonitorDjango/config.ini
+MonitorDjango/apps/monitor/__pycache__/
+MonitorDjango/apps/monitor/__pycache__/es.cpython-37.pyc
+MonitorDjango/apps/monitor/__pycache__/views.cpython-37.pyc
+

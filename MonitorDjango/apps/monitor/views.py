@@ -143,10 +143,15 @@ class WebsiteListAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
         # print("当前用户：", request.user.id)
+        after_key = request.query_params.get('after_key')
         website_es = WebsiteListES(index='visit', user_id=request.user.id)
-        website_list = website_es.get_website_list()
-
-        return Response(website_list, status=status.HTTP_200_OK)
+        website_list, after_key = website_es.get_website_list(after_key=after_key)
+        data = {
+            'website_list': website_list,
+            'after_key': after_key.to_dict(),
+        }
+        print('data')
+        return Response(data, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         website_id = request.data.get('id', '')

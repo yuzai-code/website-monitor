@@ -1,4 +1,4 @@
-__pycache__/
+/apps/monitor/__pycache__/
 *.pyc
 /monitor_venv.zip
 /test.zip
