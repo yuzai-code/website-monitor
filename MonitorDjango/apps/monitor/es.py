@@ -6,7 +6,7 @@ from WebsiteMonitor.settings import config
 
 
 class ElasticsearchQueryHelper:
-    def __init__(self, index='visit', user_id=None):
+    def __init__(self, index='test_new', user_id=None):
         self.index = index
         self.user_id = user_id
         self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
@@ -76,7 +76,7 @@ class TotalIPVisit:
         s = Search(using=self.es, index=self.index)
         s = self.helper.filter_by_user_id(s)
 
-        s = s.query("match", http_referer="google.com")
+        s = s.query("wildcard", http_referer="*google.com*")
 
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
         # # 构建排除特定用户代理和静态文件路径的查询
@@ -168,7 +168,7 @@ class TotalIPVisit:
 
         # 使用match_phrase查询匹配包含"Googlebot"的用户代理字符串
         # s = s.query('bool', must=[Q("match_phrase", user_agent="Googlebot")])
-        s = s.query("match", user_agent="Googlebot")
+        s = s.query("wildcard", user_agent="*googlebot*")
 
         # 定义日期直方图聚合，以visit_time字段进行按天聚合
         s.aggs.bucket(
@@ -283,7 +283,7 @@ class WebsiteListES(ElasticsearchQueryHelper):
     def __init__(self, index, user_id):
         super().__init__(index=index, user_id=user_id)
 
-    def get_website_list(self, page=1, page_size=1000, after_key=None):
+    def get_website_list(self, domain=None, page_size=1000, after_key=None):
         """
         获取网站列表
         :param page: 当前页码
@@ -293,14 +293,18 @@ class WebsiteListES(ElasticsearchQueryHelper):
         """
         data_list = []
         search = self.search
-        search = search.exclude("match", user_agent="neobot")
-        search = search.exclude("match", user_agent="Googlebot")
-        search = search.exclude("match", path="*/static/*")
-        search = search.exclude("match", path="*/media/*")
-        search = search.exclude("match", path="*/favicon.ico")
+        # search = search.exclude("match", user_agent="neobot")
+        # search = search.exclude("match", user_agent="Googlebot")
+        # search = search.exclude("match", path="*/static/*")
+        # search = search.exclude("match", path="*/media/*")
+        # search = search.exclude("match", path="*/favicon.ico")
 
         search = self.filter_by_user_id(search)
 
+        if domain:
+            wildcard_query = Q("wildcard", domain__keyword=f'*{domain}*')
+            search = search.query('bool', must=[wildcard_query])
+        print(search.to_dict())
         # 使用Composite Aggregation
         composite_agg = {
             "sources": [
