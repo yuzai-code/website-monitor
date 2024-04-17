@@ -1,7 +1,6 @@
 <template>
     <div class="card p-fluid">
-        <DataTable v-model:filters="filters" :value="WebsiteDetail.visits" editMode="cell" filterDisplay="row" paginator
-            :rows="10">
+        <DataTable v-model:filters="filters" :value="data" editMode="cell" filterDisplay="row" paginator :rows="10">
             <Column field="remote_addr" header="Remote Address" :sortable="true" :filter="true">
                 <template #filter="{ filterModel, filterCallback }">
                     <InputText v-model="filterModel.value" @keydown.enter="filterCallback" class="p-column-filter"
@@ -78,19 +77,16 @@
 </template>
 
 
-
 <script setup>
 import { ref, defineProps, watch } from 'vue';
 import { FilterMatchMode } from 'primevue/api';
 import Dropdown from 'primevue/dropdown';
 import TriStateCheckbox from 'primevue/tristatecheckbox';
 
-const props = defineProps({
-    WebsiteDetail: Object,
-    ip: [String, Array],
-});
+const data = ref([])
 
-
+defineProps(['data']);
+data.value = data
 const statuses = ref([
     { label: '200 OK', value: '200' },
     { label: '404 Not Found', value: '404' },
@@ -132,11 +128,8 @@ const filters = ref({
     'method': { value: null, matchMode: FilterMatchMode.EQUALS },
 });
 
-//  监听ip的变化
-watch(() => props.ip, (newIp) => {
-    if (newIp) {
-        filters.value['remote_addr'].value = newIp;
-    }
-}, { immediate: true });
+watch(filters, (newVal, oldVal) => {
+    console.log('Filters changed:', newVal);
+}, { deep: true });
 
 </script>

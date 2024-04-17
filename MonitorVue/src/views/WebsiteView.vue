@@ -14,9 +14,8 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted  } from 'vue'
 import DataTable from '@/components/DataTable.vue'
-import InputList from 'primevue/inputtext'
 import axiosInstance from '@/axiosConfig'
 
 

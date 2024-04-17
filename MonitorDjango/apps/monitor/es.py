@@ -275,7 +275,7 @@ def search_ip(self, ip, size=None):
     return response
 
 
-class WebsiteListES(ElasticsearchQueryHelper):
+class WebsiteES(ElasticsearchQueryHelper):
     """
     网站列表
     """
@@ -341,14 +341,34 @@ class WebsiteListES(ElasticsearchQueryHelper):
         print('222', after_key)
         return data_list, after_key
 
-    def get_website_detail(self, domain):
-        """
-        获取网站详细信息
-        :param domain:
-        :return:
-        """
+    def get_website_detail(self, domain=None, ip=None, last_sort_value=None, page_size=1000):
+        data_list = []
         search = self.search
-        search = self.filter_by_domain(search, domain)
-        search.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
+        search = self.filter_by_user_id(search)
+
+        if domain:
+            search = search.filter('term', domain__keyword=domain)
+        elif ip:
+            search = search.filter('term', remote_addr=ip)
+
+        # 确保查询结果按照某个字段排序，这里假设是 'timestamp'
+        search = search.sort({'visit_time': {'order': 'asc'}})
+
+        # 设置每页的大小
+        search = search.extra(size=page_size)
+
+        # 如果提供了 last_sort_value，使用它来获取下一页数据
+        if last_sort_value:
+            search = search.extra(search_after=[last_sort_value])
+
+        # 执行搜索
         response = self.execute_search(search)
-        return response.aggregations.ip.buckets
+
+        # 收集数据和新的 last_sort_value
+        new_last_sort_value = None
+        for hit in response:
+            data_list.append(hit.to_dict())
+            if 'sort' in hit:
+                new_last_sort_value = hit['sort'][0]
+
+        return data_list, new_last_sort_value

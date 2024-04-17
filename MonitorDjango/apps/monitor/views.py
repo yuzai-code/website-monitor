@@ -1,7 +1,3 @@
-import logging
-import re
-import gzip
-import tempfile
 from datetime import datetime, timedelta
 
 from django.db import transaction
@@ -18,7 +14,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .es import IpAggregation, SpiderAggregation, TotalIPVisit, WebsiteListES
+from .es import IpAggregation, SpiderAggregation, TotalIPVisit, WebsiteES
 from .models import VisitModel, WebsiteModel, LogFileModel, UserSettingsModel
 from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer
 from .tasks import handle_uploaded_file_task
@@ -97,7 +93,7 @@ class LogUpload(APIView):
             user_id = log_file.user.id
             # 调用celery任务
             result = handle_uploaded_file_task.delay(nginx_format, file_path, user_id, domain)
-            # handle_uploaded_file_task(log_file.id, domain)
+            # handle_uploaded_file_task(nginx_format, file_path, user_id, domain)
             # 获取任务id
             task_id = result.id
 
@@ -146,7 +142,7 @@ class WebsiteListAPIView(APIView):
         after_key = request.query_params.get('after_key')
         domain = request.query_params.get('search_text')
         print('domain', domain)
-        website_es = WebsiteListES(index='visit_new', user_id=request.user.id)
+        website_es = WebsiteES(index='visit_new', user_id=request.user.id)
         if domain:
             website = website_es.get_website_list(domain=domain, after_key=after_key)
             data = {
@@ -203,16 +199,23 @@ class WebsiteListAPIView(APIView):
 
 class WebsiteDetailAPIView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = MonitorSerializer
 
-    def get_queryset(self):
-        """只返回当前用户的数据"""
-        return WebsiteModel.objects.filter(user=self.request.user)
+    # serializer_class = MonitorSerializer
 
-    def get_serializer_context(self):
-        context = super(WebsiteDetailAPIView, self).get_serializer_context()
-        context.update({'need_nested': True})  # 设置 need_nested
-        return context
+    def get(self, request, *args, **kwargs):
+        user_id = request.user.id
+        ip = request.query_params.get('ip')
+
+        # 调用es
+        website_es = WebsiteES(index='visit_new', user_id=user_id)
+        if ip:  # 根据ip查询
+            print('ip', ip)
+            website_detail, new_last_sort_value = website_es.get_website_detail(ip=ip)
+        data = {
+            'website_detail': website_detail,
+            'new_last_sort_value': new_last_sort_value,
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
 
 
 class ChartDataAPIView(APIView):

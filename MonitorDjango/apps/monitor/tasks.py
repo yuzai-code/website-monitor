@@ -52,11 +52,13 @@ def handle_uploaded_file_task(nginx_format, file_path, user_id, domain):
             batch_lines.append(line)
             if len(batch_lines) >= BATCH_SIZE:
                 process_log_batch.delay(batch_lines, domain, pattern_string, user_id)
+                # process_log_batch(batch_lines, domain, pattern_string, user_id)
                 batch_lines = []
 
         # 处理剩余的行
         if batch_lines:
             process_log_batch.delay(batch_lines, domain, pattern_string, user_id)
+            # process_log_batch(batch_lines, domain, pattern_string, user_id)
 
 
 @shared_task(name='process_log_batch', queue='handle_file')

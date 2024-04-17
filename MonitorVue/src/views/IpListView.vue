@@ -19,11 +19,11 @@
             <p class="m-0">
               <DataTable :value="ips_data.ips_all">
                 <Column field="ip" header="IP">
-                  <!-- <template #body="slotProps">
-                    <router-link :to="{ name: 'WebsiteDetail', params: { id: websiteId, ip: slotProps.data.key } }">
-                      {{ slotProps.data.key }}
+                  <template #body="{ data }">
+                    <router-link :to="{ name: 'WebsiteDetail', params: {ip: data.ip } }">
+                      {{ data.ip }}
                     </router-link>
-                  </template> -->
+                  </template>
                 </Column>
                 <Column field="count" header="数量"></Column>
               </DataTable>
@@ -78,8 +78,8 @@
             <DataTable :value="ips_data.ips_min">
               <Column field="key" header="IP">
                 <!-- <template #body="slotProps"> -->
-                  <!-- 使用 websiteId 作为参数 -->
-                  <!-- <router-link :to="{ name: 'WebsiteDetail', params: { id: websiteId } }">
+                <!-- 使用 websiteId 作为参数 -->
+                <!-- <router-link :to="{ name: 'WebsiteDetail', params: { id: websiteId } }">
                     {{ slotProps.data.key }}
                   </router-link> -->
                 <!-- </template> -->
@@ -95,8 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, defineProps } from 'vue';
-import InputList from '@/components/InputList.vue';  // 确保路径正确
+import { onMounted, ref,  } from 'vue';
 import axiosInstance from '@/axiosConfig'
 import Divider from 'primevue/divider';
 import Card from 'primevue/card';
@@ -134,7 +133,7 @@ const fetchData = async () => {
     ips_data.value = response.data;
     console.log('Fetched data:', ips_data.value);
   } catch (error) {
-    console.error('Request failed:', error);
+    // console.error('Request failed:', error);
   }
 };
 onMounted(() => {

@@ -1,4 +1,4 @@
-/apps/monitor/__pycache__/
+/apps/monitor/__pycache__
 *.pyc
 /monitor_venv.zip
 /test.zip
@@ -8,7 +8,7 @@
 /.idea
 /celerybeat-schedule
 # .gitignore
-MonitorDjango/apps/monitor/__pycache__/
+MonitorDjango/apps/monitor/__pycache__
 /utils/*.ini
 ./config.ini
 ./config_prod.ini
