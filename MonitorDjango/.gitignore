@@ -13,4 +13,4 @@ MonitorDjango/apps/monitor/__pycache__
 ./config.ini
 ./config_prod.ini
 celerybeat-schedule
-
+**/__pycache__

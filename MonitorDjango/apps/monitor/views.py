@@ -366,5 +366,5 @@ class TotalIpVisit(APIView):
             'ip_count': ip_count,
             'google_ips': google_ips_counts,
         }
-        print(data)
+        # print(data)
         return Response(data, status=status.HTTP_200_OK)

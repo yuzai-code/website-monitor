@@ -112,8 +112,8 @@ class TotalIPVisit:
         response = s.execute()
         # print(response)
         # 遍历聚合结果并打印每天的访问量
-        for day in response.aggregations.visits_per_day.buckets:
-            print(f"Date: {day.key_as_string} - Visits: {day.doc_count}")
+        # for day in response.aggregations.visits_per_day.buckets:
+        #     print(f"Date: {day.key_as_string} - Visits: {day.doc_count}")
         return response.aggregations.visits_per_day.buckets
 
     def total_ip(self):
@@ -151,8 +151,8 @@ class TotalIPVisit:
         response = s.execute()
 
         # 遍历聚合结果并打印每天的独立IP访问量
-        for day in response.aggregations.visits_per_day.buckets:
-            print(f"Date: {day.key_as_string} - Unique IPs: {day.unique_ips.value}")
+        # for day in response.aggregations.visits_per_day.buckets:
+        #     print(f"Date: {day.key_as_string} - Unique IPs: {day.unique_ips.value}")
 
         return response.aggregations.visits_per_day.buckets
 
@@ -187,8 +187,8 @@ class TotalIPVisit:
         response = s.execute()
 
         # 遍历聚合结果并打印每天的总访问次数
-        for day in response.aggregations.visits_per_day.buckets:
-            print(f"Date: {day.key_as_string} - Googelbot: {day.doc_count}")
+        # for day in response.aggregations.visits_per_day.buckets:
+            # print(f"Date: {day.key_as_string} - Googelbot: {day.doc_count}")
 
         return response.aggregations.visits_per_day.buckets
 
@@ -209,11 +209,13 @@ class IpAggregation:
         :return:
         """
         s = Search(using=self.es, index=self.index)
-        s = s.exclude('match', user_agent='neobot')
-        s = s.exclude('match', user_agent='Googlebot')
-        s = s.exclude('match', path='*/static/*')
-        s = s.exclude('match', path='*/media/*')
-        s = s.exclude('match', path='*/favicon.ico')
+        s = s.query("bool", must_not=[
+            Q("wildcard", user_agent="*Googlebot*"),
+            Q("wildcard", user_agent="*neobot*")
+        ])
+        s = s.query("bool", must_not=[
+            Q("wildcard", path=".*/static/*."),
+        ])
 
         # 如果有指定域名，则添加域名过滤
         if self.domain:
@@ -224,6 +226,7 @@ class IpAggregation:
             return response.aggregations.ip.buckets
         s = self.helper.filter_by_user_id(s)
         s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
+        print('1111111')
         response = s.execute()
         return response.aggregations.ip.buckets
 
@@ -338,7 +341,7 @@ class WebsiteES(ElasticsearchQueryHelper):
 
         # 检查是否有更多页
         after_key = aggs.after_key if 'after_key' in aggs else None
-        print('222', after_key)
+        # print('222', after_key)
         return data_list, after_key
 
     def get_website_detail(self, domain=None, ip=None, last_sort_value=None, page_size=1000):
