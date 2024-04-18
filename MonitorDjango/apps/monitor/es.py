@@ -23,7 +23,15 @@ class ElasticsearchQueryHelper:
         return search
 
     def execute_search(self, search):
-        return search.execute()
+        """
+        执行搜索并处理错误
+        """
+        try:
+            response = search.execute()
+            return response.aggregations.ip.buckets
+        except Exception as e:
+            print(f"Failed to execute search: {e}")
+            return []
 
 
 class SpiderAggregation:
@@ -194,100 +202,82 @@ class TotalIPVisit:
 
 
 # ip聚合
-class IpAggregation:
-    def __init__(self, index, domain=None, user_id=None):
-        self.index = index
-        self.user_id = user_id
-        self.helper = ElasticsearchQueryHelper(index=index, user_id=user_id)
-        self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
+class IpAggregation(ElasticsearchQueryHelper):
+    def __init__(self, index, user_id, domain=None):
+        super().__init__(index=index, user_id=user_id)
         self.domain = domain
 
-    def get_ip_aggregation(self, size=None):
+    def _base_search(self, additional_filters=None):
         """
-        ip访问次数最多的前15个
-        :param size:
-        :return:
+        创建一个基本的搜索查询，排除了一些常见的机器人访问和静态资源访问
         """
-        s = Search(using=self.es, index=self.index)
-        s = s.query("bool", must_not=[
+        search_query = Search(using=self.es, index=self.index)
+        search_query = search_query.query("bool", must_not=[
             Q("wildcard", user_agent="*Googlebot*"),
             Q("wildcard", user_agent="*neobot*"),
-            Q("wildcard", user_agent="python*"),
-        ])
-        s = s.query("bool", must_not=[
-            Q("wildcard", path=".*/static/*."),
+            Q("wildcard", user_agent="python-requests*"),
+            Q("wildcard", path="*/static/*"),
+            Q("wildcard", path="*/media/*"),
+            Q("wildcard", path="*/favicon.ico")
         ])
 
-        # 如果有指定域名，则添加域名过滤
         if self.domain:
-            s = s.filter('term', domain__keyword=self.domain)
-            s = self.helper.filter_by_user_id(s)
-            s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
-            response = s.execute()
-            return response.aggregations.ip.buckets
-        s = self.helper.filter_by_user_id(s)
-        s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
-        print('1111111')
-        response = s.execute()
-        return response.aggregations.ip.buckets
+            search_query = search_query.filter('term', domain__keyword=self.domain)
 
-    def get_ip_aggregation_by_date(self, date):
-        # 获取指定日期内ip数量最多的前15个
-        s = Search(using=self.es, index=self.index)
-        s = self.helper.filter_by_user_id(s)
+        if self.user_id:
+            search_query = self.filter_by_user_id(search_query)
 
-        s = s.query('bool',
-                    must_not=[
-                        Q("wildcard", user_agent="*Googlebot*"),
-                        Q("wildcard", user_agent="*neobot*"),
-                        Q("term", user_agent="python-requests/2.31.0"),
-                    ])
-        s = s.query(
-            "bool", must_not=[
-                Q("wildcard", path="*/static/*"),
-                Q("wildcard", path="*/media/*"),
-                Q("wildcard", path="*/favicon.ico")
-            ]
-        )
+        if additional_filters:
+            for filt in additional_filters:
+                print(filt)
+                search_query = search_query.filter('range', **filt)
 
-        # 将时间范围过滤调整为指定日期
-        start_date = date + 'T00:00:00'  # 指定日期的 00:00:00
-        end_date = date + 'T23:59:59'  # 指定日期的 23:59:59
-        s = s.filter('range', **{'visit_time': {'gte': start_date, 'lte': end_date}})
-        s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
-        response = s.execute()
-        return response.aggregations.ip.buckets
+        return search_query
 
-    def get_10_ip_aggregation_min(self):
-        # 获取过去5分钟内ip数量最多的前10个
-        s = Search(using=self.es, index=self.index)
-        s = s.filter('term', domain__keyword=self.domain)
-        s = self.helper.filter_by_user_id(s)
-        s = s.filter('range', **{'visit_time': {
-            'gte': 'now-5m/m', 'lte': 'now/m'
-        }})
-        s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
-        response = s.execute()
-        return response.aggregations.ip.buckets
+    def get_ip_aggregation(self, size=15):
+        """
+        获取IP访问次数最多的前N个
+        """
+        search_query = self._base_search()
+        search_query.aggs.bucket('ip', 'terms', field='remote_addr', size=size)
+        return self.execute_search(search_query)
 
-    def get_10_ip_aggregation_hour(self):
-        # 获取过去一个小时内ip数量最多的前10个
-        s = Search(using=self.es, index=self.index)
-        s = s.filter('term', domain__keyword=self.domain)
-        s = self.helper.filter_by_user_id(s)
-        s = s.filter('range', **{'visit_time': {'gte': 'now-1h', 'lte': 'now'}})
-        s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
-        response = s.execute()
-        return response.aggregations.ip.buckets
+    def get_ip_aggregation_by_date(self, date, size=15):
+        """
+        获取指定日期内IP数量最多的前N个
+        """
+        filters = [{
+            'visit_time': {
+                'gte': f'{date}T00:00:00',
+                'lte': f'{date}T23:59:59'
+            }
+        }]
+        search_query = self._base_search(additional_filters=filters)
+        search_query.aggs.bucket('ip', 'terms', field='remote_addr', size=size)
+        return self.execute_search(search_query)
 
+    def get_ip_aggregation_time_window(self, from_time, time_unit, duration, size=10):
+        """
+        获取从指定时间开始，指定时间单位和持续时长内IP数量最多的前N个
+        """
+        from_time = datetime.strptime(from_time, '%Y-%m-%dT%H:%M:%S.%fZ')
+        if time_unit == "minute":
+            to_time = from_time + timedelta(minutes=duration)
+        elif time_unit == "hour":
+            to_time = from_time + timedelta(hours=duration)
+        else:
+            raise ValueError("Unsupported time unit. Use 'minute' or 'hour'.")
 
-def search_ip(self, ip, size=None):
-    # 根据ip查询
-    s = Search(using=self.es, index=self.index)
-    s = self.helper.filter_by_user_id(s)
-    s = s.query(Q('term', domain__keyword=self.domain) & Q('term', remote_addr=ip))
-    response = s.execute()
-    return response
+        filters = [{
+            'visit_time': {
+                'gte': from_time.isoformat(),
+                'lte': to_time.isoformat()
+            }
+        }]
+
+        search_query = self._base_search(additional_filters=filters)
+        search_query.aggs.bucket('ip', 'terms', field='remote_addr', size=size)
+        return self.execute_search(search_query)
 
 
 class WebsiteES(ElasticsearchQueryHelper):
@@ -319,7 +309,7 @@ class WebsiteES(ElasticsearchQueryHelper):
         if domain:
             wildcard_query = Q("wildcard", domain__keyword=f'*{domain}*')
             search = search.query('bool', must=[wildcard_query])
-        print(search.to_dict())
+        # print(search.to_dict())
         # 使用Composite Aggregation
         composite_agg = {
             "sources": [
@@ -330,12 +320,12 @@ class WebsiteES(ElasticsearchQueryHelper):
 
         if after_key:
             composite_agg['after'] = after_key  # 用于继续从上一次的最后位置开始
-        print('1111', after_key)
+        # print('1111', after_key)
         search.aggs.bucket('by_domain', 'composite', **composite_agg) \
             .metric('ips', 'cardinality', field='remote_addr') \
             .metric('data_transfers', 'sum', field='data_transfer')
 
-        response = self.execute_search(search)
+        response = search.execute()
 
         # 获取聚合结果
         aggs = response.aggregations.by_domain
@@ -356,7 +346,7 @@ class WebsiteES(ElasticsearchQueryHelper):
         # print('222', after_key)
         return data_list, after_key
 
-    def get_website_detail(self, domain=None, ip=None, last_sort_value=None, page_size=1000):
+    def get_website_detail(self, domain=None, ip=None, last_sort_value=None, date=None, page_size=1000):
         data_list = []
         search = self.search
         search = self.filter_by_user_id(search)
@@ -366,6 +356,10 @@ class WebsiteES(ElasticsearchQueryHelper):
         elif ip:
             search = search.filter('term', remote_addr=ip)
 
+        if date:
+            date = date.split(' ')[0]
+            print(date)
+            search = search.filter('range', visit_time={'gte': f'{date}T00:00:00', 'lte': f'{date}T23:59:59'})
         # 确保查询结果按照某个字段排序，这里假设是 'timestamp'
         search = search.sort({'visit_time': {'order': 'desc'}})
 
@@ -377,7 +371,7 @@ class WebsiteES(ElasticsearchQueryHelper):
             search = search.extra(search_after=[last_sort_value])
 
         # 执行搜索
-        response = self.execute_search(search)
+        response = search.execute()
 
         # 收集数据和新的 last_sort_value
         new_last_sort_value = None

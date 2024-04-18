@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from django.db import transaction
 from django.db.models import Count, Q, Avg, Sum, F
@@ -205,12 +205,13 @@ class WebsiteDetailAPIView(RetrieveAPIView):
     def get(self, request, *args, **kwargs):
         user_id = request.user.id
         ip = request.query_params.get('ip')
+        date_str = request.query_params.get('date')
 
         # 调用es
         website_es = WebsiteES(index='visit_new', user_id=user_id)
         if ip:  # 根据ip查询
             # print('ip', ip)
-            website_detail, new_last_sort_value = website_es.get_website_detail(ip=ip)
+            website_detail, new_last_sort_value = website_es.get_website_detail(ip=ip, date=date_str)
         data = {
             'website_detail': website_detail,
             'new_last_sort_value': new_last_sort_value,
@@ -278,32 +279,43 @@ class IpListAPIView(APIView):
         domain = request.GET.get('domain', '')
         user_id = request.user.id
         # print(user_id)
+        date_str = request.query_params.get('date', '')
+        print(date_str)
+        day = date_str.split('T')[0]
         if domain:
             # 调用es查询域名下的ip
-            aggre = IpAggregation(index='visit_new', domain=domain, user_id=user_id)
+            ip_aggre = IpAggregation(index='visit_new', domain=domain, user_id=user_id)
             # 所有
-            ips_aggregation = aggre.get_ip_aggregation()
+            ips_aggregation = ip_aggre.get_ip_aggregation()
             ips_all = self.to_serializer(ips_aggregation)
             # 今天
-            aggregation_day = aggre.get_ip_aggregation_by_date(date='2024-04-12')
+            aggregation_day = ip_aggre.get_ip_aggregation_by_date(date=day)
             ips_day = self.to_serializer(aggregation_day)
             data = {
                 'ips_all': ips_all,
                 'ips_day': ips_day,
             }
             return Response(data, status=status.HTTP_200_OK)
-        aggre = IpAggregation(index='visit_new', user_id=user_id)
+        ip_aggre = IpAggregation(index='visit_new', user_id=user_id)
         # 所有
-        ips_aggregation = aggre.get_ip_aggregation()
+        ips_aggregation = ip_aggre.get_ip_aggregation()
         ips_all = self.to_serializer(ips_aggregation)
         # 今天
-        aggregation_day = aggre.get_ip_aggregation_by_date(date='2024-04-12')
-        print(aggregation_day)
+        aggregation_day = ip_aggre.get_ip_aggregation_by_date(date=day)
         ips_day = self.to_serializer(aggregation_day)
+        # 1小时内
+        aggregation_hour = ip_aggre.get_ip_aggregation_time_window(date_str, 'hour', 1)
+        ips_hour = self.to_serializer(aggregation_hour)
+        # 5分钟内
+        aggregation_min = ip_aggre.get_ip_aggregation_time_window(date_str, 'minute', 5)
+        ips_min = self.to_serializer(aggregation_min)
         data = {
             'ips_all': ips_all,
             'ips_day': ips_day,
+            'ips_hour': ips_hour,
+            'ips_min': ips_min,
         }
+        print(data)
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -355,7 +367,7 @@ class TotalIpVisit(APIView):
         ip_date = [bucket.key_as_string for bucket in es_ips]
         ip_count = [bucket.unique_ips.value for bucket in es_ips]
         es_google_ips = total.google_ip()
-        dates = [bucket.key_as_string for bucket in es_google_ips]
+        # dates = [bucket.key_as_string for bucket in es_google_ips]
         google_ips_counts = [bucket.doc_count for bucket in es_google_ips]
 
         # print(visit_count, ip_count, google_ips)

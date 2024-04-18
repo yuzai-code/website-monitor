@@ -47,6 +47,7 @@ app.use(ConfirmationService)
 app.use(ToastService)
 app.use(DialogService)
 app.use(router)
+app.use(createPinia())
 
 // app.component('Button', Button)
 // eslint-disable-next-line vue/multi-word-component-names
