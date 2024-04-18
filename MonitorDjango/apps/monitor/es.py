@@ -188,7 +188,7 @@ class TotalIPVisit:
 
         # 遍历聚合结果并打印每天的总访问次数
         # for day in response.aggregations.visits_per_day.buckets:
-            # print(f"Date: {day.key_as_string} - Googelbot: {day.doc_count}")
+        # print(f"Date: {day.key_as_string} - Googelbot: {day.doc_count}")
 
         return response.aggregations.visits_per_day.buckets
 
@@ -211,7 +211,8 @@ class IpAggregation:
         s = Search(using=self.es, index=self.index)
         s = s.query("bool", must_not=[
             Q("wildcard", user_agent="*Googlebot*"),
-            Q("wildcard", user_agent="*neobot*")
+            Q("wildcard", user_agent="*neobot*"),
+            Q("wildcard", user_agent="python*"),
         ])
         s = s.query("bool", must_not=[
             Q("wildcard", path=".*/static/*."),
@@ -230,18 +231,29 @@ class IpAggregation:
         response = s.execute()
         return response.aggregations.ip.buckets
 
-    def get_10_ip_aggregation_day(self):
-        # 获取今天一天内ip数量最多的前10各
+    def get_ip_aggregation_by_date(self, date):
+        # 获取指定日期内ip数量最多的前15个
         s = Search(using=self.es, index=self.index)
-        s = s.exclude('match', user_agent='neobot')
-        s = s.exclude('match', user_agent='Googlebot')
-        s = s.exclude('match', path='*/static/*')
-        s = s.exclude('match', path='*/media/*')
-        s = s.exclude('match', path='*/favicon.ico')
         s = self.helper.filter_by_user_id(s)
 
-        # 将时间范围过滤调整为过去24小时
-        s = s.filter('range', **{'visit_time': {'gte': 'now-24h/h', 'lte': 'now/h'}})
+        s = s.query('bool',
+                    must_not=[
+                        Q("wildcard", user_agent="*Googlebot*"),
+                        Q("wildcard", user_agent="*neobot*"),
+                        Q("term", user_agent="python-requests/2.31.0"),
+                    ])
+        s = s.query(
+            "bool", must_not=[
+                Q("wildcard", path="*/static/*"),
+                Q("wildcard", path="*/media/*"),
+                Q("wildcard", path="*/favicon.ico")
+            ]
+        )
+
+        # 将时间范围过滤调整为指定日期
+        start_date = date + 'T00:00:00'  # 指定日期的 00:00:00
+        end_date = date + 'T23:59:59'  # 指定日期的 23:59:59
+        s = s.filter('range', **{'visit_time': {'gte': start_date, 'lte': end_date}})
         s.aggs.bucket('ip', 'terms', field='remote_addr', size=15)
         response = s.execute()
         return response.aggregations.ip.buckets
@@ -355,7 +367,7 @@ class WebsiteES(ElasticsearchQueryHelper):
             search = search.filter('term', remote_addr=ip)
 
         # 确保查询结果按照某个字段排序，这里假设是 'timestamp'
-        search = search.sort({'visit_time': {'order': 'asc'}})
+        search = search.sort({'visit_time': {'order': 'desc'}})
 
         # 设置每页的大小
         search = search.extra(size=page_size)

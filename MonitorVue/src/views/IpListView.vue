@@ -40,11 +40,11 @@
           <p class="m-0">
             <DataTable :value="ips_data.ips_day">
               <Column field="ip" header="IP">
-                <!-- <template #body="slotProps">
-                  <router-link :to="{ name: 'WebsiteDetail', params: { id: websiteId, ip: slotProps.data.key } }">
-                    {{ slotProps.data.key }}
-                  </router-link>
-                </template> -->
+                <template #body="{ data }">
+                    <router-link :to="{ name: 'WebsiteDetail', params: {ip: data.ip } }">
+                      {{ data.ip }}
+                    </router-link>
+                  </template>
               </Column>
               <Column field="count" header="数量"></Column>
             </DataTable>

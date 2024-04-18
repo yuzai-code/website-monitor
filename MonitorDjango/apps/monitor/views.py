@@ -132,16 +132,16 @@ class WebsiteListAPIView(APIView):
         if dates_range:
             start_date, end_date = dates_range
 
-            print('222', queryset, start_date, end_date)
+            # print('222', queryset, start_date, end_date)
             queryset = queryset.filter(visitmodel__visit_time__range=(start_date, end_date))
-            print('1111', queryset)
+            # print('1111', queryset)
         return queryset
 
     def get(self, request, *args, **kwargs):
         # print("当前用户：", request.user.id)
         after_key = request.query_params.get('after_key')
         domain = request.query_params.get('search_text')
-        print('domain', domain)
+        # print('domain', domain)
         website_es = WebsiteES(index='visit_new', user_id=request.user.id)
         if domain:
             website = website_es.get_website_list(domain=domain, after_key=after_key)
@@ -162,7 +162,7 @@ class WebsiteListAPIView(APIView):
     def post(self, request, *args, **kwargs):
         website_id = request.data.get('id', '')
         dates = request.data.get('dates')
-        print(f'dates: {dates}, website_id: {website_id}')
+        # print(f'dates: {dates}, website_id: {website_id}')
         dates_range = self.get_dates_range(dates)
         # print(f'dates_range: {dates_range}')
         # 仅对有必要的记录进行查询，避免全表扫描
@@ -209,7 +209,7 @@ class WebsiteDetailAPIView(RetrieveAPIView):
         # 调用es
         website_es = WebsiteES(index='visit_new', user_id=user_id)
         if ip:  # 根据ip查询
-            print('ip', ip)
+            # print('ip', ip)
             website_detail, new_last_sort_value = website_es.get_website_detail(ip=ip)
         data = {
             'website_detail': website_detail,
@@ -277,7 +277,7 @@ class IpListAPIView(APIView):
     def get(self, request, *args, **kwargs):
         domain = request.GET.get('domain', '')
         user_id = request.user.id
-        print(user_id)
+        # print(user_id)
         if domain:
             # 调用es查询域名下的ip
             aggre = IpAggregation(index='visit_new', domain=domain, user_id=user_id)
@@ -285,7 +285,7 @@ class IpListAPIView(APIView):
             ips_aggregation = aggre.get_ip_aggregation()
             ips_all = self.to_serializer(ips_aggregation)
             # 今天
-            aggregation_day = aggre.get_10_ip_aggregation_day()
+            aggregation_day = aggre.get_ip_aggregation_by_date(date='2024-04-12')
             ips_day = self.to_serializer(aggregation_day)
             data = {
                 'ips_all': ips_all,
@@ -297,7 +297,7 @@ class IpListAPIView(APIView):
         ips_aggregation = aggre.get_ip_aggregation()
         ips_all = self.to_serializer(ips_aggregation)
         # 今天
-        aggregation_day = aggre.get_10_ip_aggregation_day()
+        aggregation_day = aggre.get_ip_aggregation_by_date(date='2024-04-12')
         print(aggregation_day)
         ips_day = self.to_serializer(aggregation_day)
         data = {
@@ -326,7 +326,7 @@ class SpiderAPIView(APIView):
         website = self.get_object(pk=pk, user=self.request.user)
         spider_aggregation = SpiderAggregation(index='visit_new', domain=website.domain)
         get_spider_aggregatio = spider_aggregation.get_spider_aggregation()
-        print(get_spider_aggregatio)
+        # print(get_spider_aggregatio)
         return Response(list(get_spider_aggregatio), status=status.HTTP_200_OK)
 
 

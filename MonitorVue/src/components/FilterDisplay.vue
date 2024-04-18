@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/no-dupe-keys -->
 <template>
     <div class="card p-fluid">
         <DataTable v-model:filters="filters" :value="data" editMode="cell" filterDisplay="row" paginator :rows="10">
@@ -83,6 +84,7 @@ import { FilterMatchMode } from 'primevue/api';
 import Dropdown from 'primevue/dropdown';
 import TriStateCheckbox from 'primevue/tristatecheckbox';
 
+// eslint-disable-next-line vue/no-dupe-keys
 const data = ref([])
 
 defineProps(['data']);
@@ -127,6 +129,11 @@ const filters = ref({
     'malicious_request': { value: null, matchMode: FilterMatchMode.CUSTOM },
     'method': { value: null, matchMode: FilterMatchMode.EQUALS },
 });
+
+const formatDateTime = (isoString) => {
+    const date = new Date(isoString);
+    return date.toLocaleString(); // 将返回本地格式的日期和时间
+};
 
 watch(filters, (newVal, oldVal) => {
     console.log('Filters changed:', newVal);

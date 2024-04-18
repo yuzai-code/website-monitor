@@ -27,11 +27,14 @@
 
       <!-- 为 visit_time 使用 Calendar 作为筛选器 -->
       <Column field="visit_time" header="Visit Time" :sortable="true">
-        <template #filter="{ filterModel, filterCallback }">
-          <Calendar v-model="filterModel.value" @update:modelValue="filterCallback" dataType="date" :showTime="true"
-            class="p-column-filter" placeholder="按 Visit Time 过滤" />
-        </template>
-      </Column>
+                <template v-slot:body="{ data }">
+                    {{ formatDateTime(data.visit_time) }}
+                </template>
+                <template #filter="{ filterModel, filterCallback }">
+                    <Calendar v-model="filterModel.value" @input="filterCallback" class="p-column-filter"
+                        placeholder="按日期过滤" />
+                </template>
+            </Column>
 
       <!-- 为 http_referer 使用 InputText 作为筛选器 -->
       <Column field="http_referer" header="http_referer" :filter="true">
@@ -41,13 +44,16 @@
         </template>
       </Column>
 
-      <!-- 为 http_x_forwarded_for 使用 InputText 作为筛选器 -->
+      <!-- 为 path 使用 InputText 作为筛选器 -->
       <Column field="path" header="路径" :filter="true">
-        <template #filter="{ filterModel, filterCallback }">
-          <InputText v-model="filterModel.value" @keydown.enter="filterCallback" class="p-column-filter"
-            placeholder="" />
-        </template>
-      </Column>
+                <template v-slot:body="{ data }">
+                    {{ cleanPath(data.path) }}
+                </template>
+                <template #filter="{ filterModel, filterCallback }">
+                    <InputText v-model="filterModel.value" @keydown.enter="filterCallback" class="p-column-filter"
+                        placeholder="按路径过滤" />
+                </template>
+            </Column>
 
       <!-- 为 user_agent 使用 InputText 作为筛选器 -->
       <Column field="user_agent" header="User Agent" :filter="true">
@@ -58,7 +64,7 @@
       </Column>
 
       <!-- 为 data_transfer 使用 InputText 作为筛选器 -->
-      <Column field="data_transfer" header="流量" :filter="true">
+      <Column field="data_transfer" header="流量" :sortable="true">
         <template #filter="{ filterModel, filterCallback }">
           <InputText v-model="filterModel.value" @keydown.enter="filterCallback" class="p-column-filter"
             placeholder="" />
@@ -69,7 +75,7 @@
       <Column field="status_code" header="Status Code" :filter="true">
         <template #filter="{ filterModel, filterCallback }">
           <Dropdown v-model="filterModel.value" @change="filterCallback" :options="statuses" optionLabel="label"
-            optionValue="value" class="p-column-filter" placeholder="Select One" style="min-width: 12rem"
+            optionValue="value" 
             :showClear="true" />
         </template>
       </Column>
@@ -77,15 +83,21 @@
       <!-- 为 malicious_request 使用 TriStateCheckbox 作为筛选器 -->
       <Column field="malicious_request" header="是否恶意请求" :filter="true">
         <template #filter="{ filterModel, filterCallback }">
-          <TriStateCheckbox v-model="filterModel.value" @change="filterCallback" class="p-column-filter" />
+          <Dropdown v-model="filterModel.value" @change="filterCallback" :options="malicious_requests" optionLabel="label"
+            optionValue="value" 
+            :showClear="true" />
         </template>
       </Column>
 
       <!-- 为 method 使用 Dropdown 作为筛选器 -->
       <Column field="method" header="Method" :filter="true">
+        <template v-slot:body="{ data }">
+                    {{ cleanmethods(data.method) }}
+
+        </template>
         <template #filter="{ filterModel, filterCallback }">
           <Dropdown v-model="filterModel.value" @change="filterCallback" :options="methods" optionLabel="label"
-            optionValue="value" class="p-column-filter" placeholder="Select One" style="min-width: 12rem"
+            optionValue="value" 
             :showClear="true" />
         </template>
       </Column>
@@ -98,8 +110,8 @@ import { ref, onMounted, watch } from 'vue'
 import axiosInstance from '@/axiosConfig'
 import { useRoute } from 'vue-router'
 import Card from 'primevue/card';          // optional
-// import FilterDisplay from '@/components/FilterDisplay.vue'; // optional
 import { FilterMatchMode } from 'primevue/api';
+import Dropdown from 'primevue/dropdown';      // optional
 
 const route = useRoute()  // 获取路由参数
 const WebsiteDetail = ref([])
@@ -119,9 +131,10 @@ const onPage = (event) => {
 
 
 const statuses = ref([
-  { label: '200 OK', value: '200' },
-  { label: '404 Not Found', value: '404' },
-  { label: '500 Internal Server Error', value: '500' },
+  { label: '200', value: '200' },
+  { label: '404', value: '404' },
+  { label: '500', value: '500' },
+  { label: '412', value: '412' },
   // Add other statuses as needed
 ]);
 
@@ -132,6 +145,11 @@ const methods = ref([
   // { label: 'DELETE', value: 'DELETE' },
   // Add other methods as needed
 ]);
+
+const malicious_requests = ref([
+  {label: 'true', value: true},
+  {label: 'false', value: false}
+])
 
 // 更新列定义，使其匹配您的数据
 const columns = ref([
@@ -155,11 +173,31 @@ const filters = ref({
   'user_agent': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   'path': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   'visit_time': { value: null, matchMode: FilterMatchMode.DATE_IS },
-  'data_transfer': { value: null, matchMode: FilterMatchMode.EQUALS },
+  'data_transfer': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   'status_code': { value: null, matchMode: FilterMatchMode.EQUALS },
-  'malicious_request': { value: null, matchMode: FilterMatchMode.CUSTOM },
+  'malicious_request': { value: null, matchMode: FilterMatchMode.EQUALS },
   'method': { value: null, matchMode: FilterMatchMode.EQUALS },
 });
+
+const formatDateTime = (isoString) => {
+    const date = new Date(isoString);
+    return date.toLocaleString(); // 将返回本地格式的日期和时间
+};
+
+const cleanPath = (pathValue) => {
+    if (Array.isArray(pathValue) && pathValue.length > 0) {
+        return pathValue[0];  // 返回数组中的第一个元素，假设数组里只有一个URL字符串
+    }
+    return pathValue;  // 如果不是数组，直接返回原值
+};
+
+const cleanmethods = (methodValue) => {
+    if (Array.isArray(methodValue) && methodValue.length > 0) {
+        return methodValue[0];  // 返回数组中的第一个元素，假设数组里只有一个URL字符串
+    }
+    return methodValue;  // 如果不是数组，直接返回原值
+
+};
 
 const fetchData = async () => {
   const ip = route.params.ip
