@@ -85,7 +85,7 @@ class LogUpload(APIView):
 
             log_file = LogFileModel.objects.get(id=log_file.id)
             file_name = log_file.upload_file.name
-            file_path = f'/home/yuzai/Project/website-monitor/MonitorDjango/media/{file_name}'
+            file_path = f'/home/yuzai/Project/website-monitor-dev/MonitorDjango/media/{file_name}'
             user_settins = UserSettingsModel.objects.filter(user=request.user).first()
             if not user_settins:
                 return Response({'message': '请先设置nginx日志格式'}, status=status.HTTP_401_UNAUTHORIZED)

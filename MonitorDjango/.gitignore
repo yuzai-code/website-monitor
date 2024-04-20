@@ -7,8 +7,7 @@
 /logs
 /.idea
 /celerybeat-schedule
-# .gitignore
-MonitorDjango/apps/monitor/__pycache__
+
 /utils/*.ini
 ./config.ini
 ./config_prod.ini
