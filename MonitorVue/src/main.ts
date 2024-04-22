@@ -1,5 +1,5 @@
 import { createApp } from 'vue'
-import { createPinia } from 'pinia'
+// import { createPinia } from 'pinia'
 
 import App from './App.vue'
 import router from './router'
@@ -40,6 +40,7 @@ if (token) {
   axios.defaults.headers.common['Authorization'] = `Token ${token}`
 }
 
+// const pinia = createPinia()
 const app = createApp(App)
 
 app.use(PrimeVue, { ripple: true })
@@ -47,7 +48,8 @@ app.use(ConfirmationService)
 app.use(ToastService)
 app.use(DialogService)
 app.use(router)
-app.use(createPinia())
+// app.use(createPinia())
+// app.use(pinia)
 
 // app.component('Button', Button)
 // eslint-disable-next-line vue/multi-word-component-names
