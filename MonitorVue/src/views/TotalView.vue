@@ -12,7 +12,7 @@
     </div>
 </template>
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted,  } from 'vue'
 import Chart from 'primevue/chart'
 import axiosInstance from '@/axiosConfig.ts'
 
@@ -20,48 +20,43 @@ import axiosInstance from '@/axiosConfig.ts'
 
 const chartData = ref(null)
 const chartOptions = ref(null)
-const dataset = chartData.value?.datasets[0]
 
 const transformDataToChartData = (apiData) => {
-    // // 提取日期作为图表的 X 轴标签
-    // const labels = apiData[0].visit_count.map((entry) => entry.visit_time)
+    const labels = apiData.map(entry => entry.visit_date);
+    const totalVisitData = apiData.map(entry => entry.google_visit);
+    const totalIPData = apiData.map(entry => entry.total_ip);
+    const googleBotData = apiData.map(entry => entry.google_bot);
 
-    // // 提取 visit_count 作为第一个数据集
-    // const visitCountData = apiData[0].visit_count.map((entry) => entry.visit_count)
-
-    // // 提取 data_transfer 作为第二个数据集
-    // const dataTransferData = apiData[0].data_transfer.map((entry) => entry.data_transfer)
-
-    // 返回图表数据
     return {
-        labels: apiData.date,
+        labels,
         datasets: [
             {
-                label: '来自google的访问量',
-                data: apiData.visit_count || [0],
+                label: '来自 Google 的访问量',
+                data: totalVisitData,
                 fill: false,
                 borderColor: '#42A5F5',
                 tension: 0.1
             },
             {
                 label: '所有 IP',
-                data: apiData.ip_count || [0],
+                data: totalIPData,
                 fill: false,
                 borderColor: '#FFA726',
                 tension: 0.1
             },
             {
                 label: 'Googlebot 数',
-                data: apiData.google_ips || [0],
+                data: googleBotData,
                 fill: false,
                 borderColor: '#66BB6A',
                 tension: 0.1
             }
         ]
-    }
+    };
 }
 
-const setChartData = async (id) => {
+
+const setChartData = async () => {
     // 获取存储的Token
     const token = localStorage.getItem('authToken');
     try {

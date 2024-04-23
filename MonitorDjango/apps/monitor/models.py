@@ -7,6 +7,22 @@ from utils.basemodel import BaseModel
 
 # Create your models here.
 
+class TotalModel(BaseModel):
+    """
+    汇总
+    """
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, verbose_name='用户', null=True, blank=True)
+    google_visit = models.IntegerField(verbose_name='来自google的总访问量', default=0)
+    total_ip = models.IntegerField(verbose_name='总访问IP数', default=0)
+    google_bot = models.IntegerField(verbose_name='GoogleBot访问量', default=0)
+    visit_date = models.DateField(default=None, verbose_name='日期', db_index=True)
+
+    class Meta:
+        db_table = 't_total'
+        verbose_name = '汇总'
+        verbose_name_plural = verbose_name
+
+
 class UserSettingsModel(BaseModel):
     """
     用户设置

@@ -14,9 +14,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .es import IpAggregation, SpiderAggregation, TotalIPVisit, WebsiteES
-from .models import VisitModel, WebsiteModel, LogFileModel, UserSettingsModel
-from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer
+from .es import IpAggregation, SpiderAggregation, TotalAggregation, WebsiteES
+from .models import VisitModel, WebsiteModel, LogFileModel, UserSettingsModel, TotalModel
+from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer, TotalSerializer
 from .tasks import handle_uploaded_file_task
 from django.http import JsonResponse
 from celery.result import AsyncResult
@@ -342,41 +342,20 @@ class SpiderAPIView(APIView):
         return Response(list(get_spider_aggregatio), status=status.HTTP_200_OK)
 
 
-class TotalIpVisit(APIView):
+class TotalAPIView(APIView):
     """
-    统计所有的ip和访问量
+    汇总数据
     """
     permission_classes = [IsAuthenticated]
 
-    def to_serailizer(self, es_data):
-        date = []
-        count = []
-        for bucket in es_data:
-            date_str = bucket.key_as_string
-            date_obj = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
-            formatted_date = date_obj.strftime("%Y-%m-%d")
-            date.append(formatted_date)
-            count.append(bucket.doc_count)
-
-        return date, count
-
     def get(self, request):
-        total = TotalIPVisit(index='visit_new', user_id=self.request.user.id)
-        visit_date, visit_count = self.to_serailizer(total.total_visit())
-        es_ips = total.total_ip()
-        ip_date = [bucket.key_as_string for bucket in es_ips]
-        ip_count = [bucket.unique_ips.value for bucket in es_ips]
-        es_google_ips = total.google_ip()
-        # dates = [bucket.key_as_string for bucket in es_google_ips]
-        google_ips_counts = [bucket.doc_count for bucket in es_google_ips]
-
-        # print(visit_count, ip_count, google_ips)
-        data = {
-            'date': visit_date,
-            'visit_count': visit_count,
-            'ip_date': ip_date,
-            'ip_count': ip_count,
-            'google_ips': google_ips_counts,
-        }
-        # print(data)
+        user = request.user
+        # 获取当天日期
+        today = date.today()
+        # 获取过去两周的时间
+        two_weeks_ago = today - timedelta(days=14)
+        # 获取过去两周的数据
+        total = TotalModel.objects.filter(user=user, visit_date__range=(two_weeks_ago, today))
+        data = TotalSerializer(total, many=True).data
+        print(data)
         return Response(data, status=status.HTTP_200_OK)

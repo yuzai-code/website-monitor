@@ -1,6 +1,17 @@
 from rest_framework import serializers
 
-from monitor.models import WebsiteModel, VisitModel
+from monitor.models import WebsiteModel, VisitModel, TotalModel
+
+
+class TotalSerializer(serializers.ModelSerializer):
+    """
+    汇总的序列化器
+    """
+    visit_date = serializers.DateField(format="%Y-%m-%d")
+
+    class Meta:
+        model = TotalModel
+        fields = ['visit_date', 'google_visit', 'total_ip', 'google_bot']
 
 
 class VisitSerializer(serializers.ModelSerializer):

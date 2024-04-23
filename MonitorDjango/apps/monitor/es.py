@@ -54,14 +54,14 @@ class SpiderAggregation:
         return response.aggregations.ip.buckets
 
 
-# 统计总的IP与访问量
-class TotalIPVisit:
+class TotalAggregation(ElasticsearchQueryHelper):
+    """
+    汇总,统计过去两周内的数据
+    """
 
     def __init__(self, index, user_id):
-        self.index = index
-        self.user_id = user_id
-        self.helper = ElasticsearchQueryHelper(index=index, user_id=user_id)
-        self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
+        super().__init__(index=index, user_id=user_id)
+        # self.helper = ElasticsearchQueryHelper(index=index, user_id=user_id)
         self.two_weeks_ago = datetime.now() - timedelta(weeks=2)  # 计算两周前的日期)
         self.two_weeks_ago_str = self.two_weeks_ago.strftime('%Y-%m-%dT%H:%M:%S')  # 转换为适合Elasticsearch的日期格式字符串)
         self.excluded_user_agents = [
@@ -70,7 +70,7 @@ class TotalIPVisit:
         ]
         self.included_user_agents = "compatible; Googlebot/2.1; +http://www.google.com/bot.html",
 
-    def total_visit(self):
+    def google_visit(self):
         """
         统计过去两周内，排除特定用户代理后的每日访问量。
         """
@@ -82,7 +82,7 @@ class TotalIPVisit:
 
         # 创建搜索对象
         s = Search(using=self.es, index=self.index)
-        s = self.helper.filter_by_user_id(s)
+        s = self.filter_by_user_id(s)
 
         s = s.query("wildcard", http_referer="*google.com*")
 
@@ -130,7 +130,7 @@ class TotalIPVisit:
         :return:
         """
         s = Search(using=self.es, index=self.index)
-        s = self.helper.filter_by_user_id(s)
+        s = self.filter_by_user_id(s)
         # 添加时间范围查询，限制为过去两周
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
 
@@ -164,13 +164,13 @@ class TotalIPVisit:
 
         return response.aggregations.visits_per_day.buckets
 
-    def google_ip(self):
+    def google_bot(self):
         """
         统计所有来自Google的爬虫，不使用正则表达式进行匹配。
         """
         s = Search(using=self.es, index=self.index)
 
-        s = self.helper.filter_by_user_id(s)
+        s = self.filter_by_user_id(s)
         # 添加时间范围查询，限制为过去两周
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
 

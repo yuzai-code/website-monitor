@@ -30,6 +30,6 @@ urlpatterns = [
     path('api/website_detail/', views.WebsiteDetailAPIView.as_view(), name='website_detail'),
     path('api/ip_list/', views.IpListAPIView.as_view(), name='ip_list'),
     path('api/spider/<int:pk>/', views.SpiderAPIView.as_view(), name='spider'),
-    path('api/total/', views.TotalIpVisit.as_view(), name='total'),
+    path('api/total/', views.TotalAPIView.as_view(), name='total'),
     path('api/task-status/', views.task_status, name='任务状态'),
 ]

@@ -4,11 +4,14 @@ import os
 
 import sys
 
+from django.contrib.auth.models import User
 from django.core.wsgi import get_wsgi_application
 from django.db import transaction
 from elasticsearch.helpers import bulk
 from elasticsearch_dsl import connections, Search, Index
 from rest_framework.response import Response
+
+from monitor.es import TotalAggregation
 
 sys.path.extend(['/home/yuzai/Desktop/WebsiteMonitor'])
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "WebsiteMonitor.settings")
@@ -16,8 +19,8 @@ application = get_wsgi_application()
 import logging
 import re
 
-from celery import shared_task
-from monitor.models import WebsiteModel, VisitModel, LogFileModel, UserSettingsModel
+from celery import shared_task, chord
+from monitor.models import WebsiteModel, VisitModel, LogFileModel,  TotalModel
 import pygrok
 from datetime import datetime, timedelta
 from WebsiteMonitor.settings import config
@@ -27,38 +30,64 @@ from WebsiteMonitor.settings import config
 elasticsearch_client = connections.create_connection(hosts=[config['es']['ES_URL']], timeout=20)
 
 
+@shared_task(name='total', queue='handle_file')
+def total(results, user_id):
+    """
+    汇总,文件处理完成后调用
+    :return:
+    """
+
+    # 调用es进行汇总
+    total_agg = TotalAggregation(index='visit_new', user_id=user_id)
+    total_visit = total_agg.google_visit()
+    visit_count = [bucket.doc_count for bucket in total_visit]
+    es_ips = total_agg.total_ip()
+    ip_date = [bucket.key_as_string for bucket in es_ips]
+    # 将时间字符串转换为日期
+    ip_date = [datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ').date() for date in ip_date]
+    ip_count = [bucket.unique_ips.value for bucket in es_ips]
+    es_google_ips = total_agg.google_bot()
+    google_ips_counts = [bucket.doc_count for bucket in es_google_ips]
+    # logging.info(f'user_id: {user_id}, visit_count: {visit_count}, ip_date: {ip_date}, ip_count: {ip_count}, '
+    #              f'google_ips_counts: {google_ips_counts}')
+
+    user_instance = User.objects.get(id=user_id)
+    # 保存到数据库
+    for i in range(len(visit_count)):
+        # print(ip_date[i], visit_count[i], ip_count[i], google_ips_counts[i])
+        # 根据日期查询是否存在,来进行更新或者创建
+        TotalModel.objects.update_or_create(user=user_instance, visit_date=ip_date[i],
+                                            defaults={'google_visit': visit_count[i], 'total_ip': ip_count[i],
+                                                      'google_bot': google_ips_counts[i]})
+
+
 @shared_task(name='handle_file', queue='handle_file')
 def handle_uploaded_file_task(nginx_format, file_path, user_id, domain):
-    BATCH_SIZE = 1000  # 设置批量处理的大小
-
-    # 使用pygrok解析日志
+    BATCH_SIZE = 1000
     pattern_string = generate_nginx_regex(nginx_format)
-
-    # 移除所有单引号
     pattern_string = pattern_string.replace("'", "")
-
-    # 使用正则表达式将多个空格替换为一个空格
     pattern_string = re.sub(r'\s+', ' ', pattern_string).strip()
-    # 检查文件是否是gzip压缩文件
+
+    tasks = []
     if file_path.endswith('.gz'):
         open_func = gzip.open
     else:
         open_func = open
 
-    # 批量处理日志文件
     with open_func(file_path, 'rt', encoding='utf-8') as file:
         batch_lines = []
         for line in file:
             batch_lines.append(line)
             if len(batch_lines) >= BATCH_SIZE:
-                process_log_batch.delay(batch_lines, domain, pattern_string, user_id)
-                # process_log_batch(batch_lines, domain, pattern_string, user_id)
+                # 将任务添加到列表而不是直接发起
+                tasks.append(process_log_batch.s(batch_lines, domain, pattern_string, user_id))
                 batch_lines = []
 
-        # 处理剩余的行
-        if batch_lines:
-            process_log_batch.delay(batch_lines, domain, pattern_string, user_id)
-            # process_log_batch(batch_lines, domain, pattern_string, user_id)
+        if batch_lines:  # 处理最后一个批次
+            tasks.append(process_log_batch.s(batch_lines, domain, pattern_string, user_id))
+
+    # 使用chord来确保所有process_log_batch任务完成后调用total任务
+    result = chord(tasks)(total.s(user_id=user_id))
 
 
 @shared_task(name='process_log_batch', queue='handle_file')
