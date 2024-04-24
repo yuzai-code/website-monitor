@@ -1,0 +1,82 @@
+version: '3.7'
+services:
+  vue:
+    container_name: vue
+    build: 
+      context: ./MonitorVue # Dockerfile所在目录
+      dockerfile: Dockerfile  # Dockerfile名称
+    ports:
+      - "5000:5000"
+    depends_on:
+      - django
+    volumes:
+      - ./MonitorVue:/app
+    networks:
+      - monitor
+    restart: unless-stopped
+
+  django:
+    container_name: django
+    build: 
+      context: ./MonitorDjango  # Dockerfile所在目录
+      dockerfile: Dockerfile  # Dockerfile名称
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./MonitorDjango:/app
+      - /home/website-monitor-dev/MonitorDjango/media/:/app/media
+      - ./MonitorDjango/config_prod.ini:/app/config.ini
+    networks:
+      - monitor
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - /opt/docker/redis/data:/data # 持久化数据卷
+    networks:
+      - monitor
+    restart: unless-stopped
+    
+  elasticsearch:
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms8G -Xmx8G"
+    volumes:
+      - /opt/docker/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - /opt/docker/elasticsearch/data:/usr/share/elasticsearch/data
+      - /opt/docker/elasticsearch/plugins:/usr/share/elasticsearch/plugins
+
+    networks:
+      - monitor
+    restart: unless-stopped
+  
+  postgres:
+    container_name: postgres
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=mypass
+      - POSTGRES_DB=postgres
+    volumes:
+      - /opt/docker/postgres-share:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - monitor
+    restart: unless-stopped
+
+networks:
+  monitor:
+    driver: bridge

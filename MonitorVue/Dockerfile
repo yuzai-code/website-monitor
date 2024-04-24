@@ -17,4 +17,4 @@ RUN npm run build
 EXPOSE 5000
 
 # 启动应用程序
-CMD ["npm", "run", "serve"]
+CMD ["npm", "run", "dev"]
