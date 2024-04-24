@@ -20,7 +20,7 @@ import logging
 import re
 
 from celery import shared_task, chord
-from monitor.models import WebsiteModel, VisitModel, LogFileModel,  TotalModel
+from monitor.models import WebsiteModel, VisitModel, LogFileModel, TotalModel
 import pygrok
 from datetime import datetime, timedelta
 from WebsiteMonitor.settings import config
