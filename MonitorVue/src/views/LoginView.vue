@@ -12,20 +12,27 @@
             </div>
             <button type="submit">Login</button>
         </form>
+        <router-link to="/register" class="register-button" rounded>
+            Register
+        </router-link>
+
     </div>
+
 </template>
 
 <script setup lang="ts">
+import axiosInstance from '@/axiosConfig';
+import { useUserStore } from '@/store/userStore'; // 引入用户信息store
+import { useToast } from 'primevue/usetoast';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import axiosInstance from '@/axiosConfig'
-import { useToast } from 'primevue/usetoast';
 
 // 使用ref创建响应式引用
 const username = ref('');
 const password = ref('');
 const toast = useToast();
 const router = useRouter(); // 使用useRouter获取路由实例
+const userStore = useUserStore(); // 获取用户信息store
 
 async function login() {
     try {
@@ -34,8 +41,10 @@ async function login() {
             password: password.value,
         });
 
-        localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('authToken', response.data.token);  // 将获取的认证令牌保存到localStorage中
         toast.add({ severity: 'success', summary: '登录成功', detail: '您已成功登录' });
+        userStore.login(); // 调用store中的login方法
+        await userStore.fetchUserProfile(); // 登录成功后获取用户信息
         router.push({ name: 'Home' });
     } catch (error) {
         if (error.response && error.response.status === 400) {

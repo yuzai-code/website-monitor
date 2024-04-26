@@ -1,5 +1,6 @@
+import { useUserStore } from '@/store/userStore'
+import { useToast } from 'primevue/usetoast'
 import { createRouter, createWebHistory } from 'vue-router'
-import axios from 'axios'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -54,17 +55,19 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  if (to.matched.some((record) => record.meta.requiresAuth)) {
-    // 假设使用localStorage存储认证令牌
-    const isAuthenticated = localStorage.getItem('authToken')
-    if (!isAuthenticated) {
-      // 未认证则重定向到登录页面
-      next({ name: 'Login' })
-    } else {
-      next()
-    }
+  const userStore = useUserStore()
+  const toast = useToast()
+  // 检查是否需要登录的页面
+  if (to.meta.requiresAuth && !userStore.isLoggedIn) {
+    toast.add({
+      severity: 'warn',
+      summary: '警告',
+      detail: '请先登陆!',
+      life: 3000
+    }) // 显示提示信息
+    next({ name: 'Login' }) // 重定向到登录页面
   } else {
-    next()
+    next() // 继续导航
   }
 })
 

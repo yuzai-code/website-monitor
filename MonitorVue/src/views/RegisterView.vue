@@ -17,9 +17,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import axiosInstance from '@/axiosConfig'
+import axiosInstance from '@/axiosConfig';
+import router from '@/router';
 import { useToast } from 'primevue/usetoast';
+import { ref } from 'vue';
 
 const username = ref('');
 const password = ref('');
@@ -35,6 +36,8 @@ async function register() {
         console.log('toast:', toast)
         // 处理成功逻辑，例如跳转页面
         toast.add({ severity: 'success', summary: '注册成功', detail: '您已成功注册' });
+        // 跳转到登陆页面
+        router.push('login/')
     } catch (error) {
         console.error('Registration failed', error.response.data);
         // 处理错误，显示错误信息

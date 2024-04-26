@@ -8,11 +8,11 @@
 
           <div>
             <span class="inline-flex align-items-center gap-2" @click="showUserProfile">
-              <Avatar :label="getAvatarLabel(username)" class="mr-2" size="large"
+              <Avatar :label="getAvatarLabel(userProfile.user)" class="mr-2" size="large"
                 style="background-color: #ece9fc; color: #2a1261" />
               <span class="font-semibold text-2xl text-primary">Monitor</span>
             </span>
-            <UserProfile ref="userProfileRef" :initialUsername="username" :initialNginxLogFormat="nginx_log_format" />
+            <UserProfile ref="userProfileRef" />
           </div>
         </div>
         <div class="overflow-y-auto">
@@ -113,50 +113,53 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import LogoutButton from '@/components/LogoutButton.vue'
-import axiosInstance from '@/axiosConfig'
-import Avatar from 'primevue/avatar';
-import UserProfile from '@/components/UserProfile.vue'
+import LogoutButton from '@/components/LogoutButton.vue';
+import UserProfile from '@/components/UserProfile.vue';
+import { storeToRefs } from 'pinia';
+import { useToast } from 'primevue/usetoast';
+import { computed, ref } from 'vue';
+import { useUserStore } from './store/userStore';
 
 
 const visible = ref(false) // State to control the visibility of the sidebar
-const username = ref('') // State to store the username
-const nginx_log_format = ref('') // nginx 日志配置
-
+const isUserLoggedIn = computed(() => useUserStore().isLoggedIn);
+const toast = useToast();
 // 正确声明 ref
 const userProfileRef = ref();
+const userProfile = storeToRefs(useUserStore()).userProfile;
+
 
 // 修改此处确保正确调用子组件方法
 const showUserProfile = () => {
+  if (!isUserLoggedIn.value) {
+    // 如果用户未登录，不执行任何操作
+    // console.log('用户未登录，无法显示用户个人资料');
+    toast.add({
+      severity: 'error',
+      summary: '请先登录',
+      detail: '请先登录后才能查看个人资料'
+    });
+    return;
+  }
+
+
+  // 用户已登录时才执行以下操作
   if (userProfileRef.value) {
-    // 这里不再是 userProfileRef.value.show()，而是正确访问暴露的方法
+    // 调用用户个人资料组件的显示方法
     userProfileRef.value.show();
   }
 };
 
-// 异步向后端api接口发送请求
-const fetchData = async () => {
-  try {
-    const response = await axiosInstance.get('/api/user_settings/')
 
-    username.value = response.data.user
-    nginx_log_format.value = response.data.nginx_log_format
-
-
-  } catch (error) {
-    console.error('Request failed:', error)
-  }
-}
 
 const getAvatarLabel = (username) => {
   // 返回用户名的首字母作为 Avatar 的 label
   return username.charAt(0).toUpperCase();
 };
 
-onMounted(() => {
-  fetchData()
-})
+// onMounted(() => {
+//   fetchData()
+// })
 </script>
 
 <style scoped>
