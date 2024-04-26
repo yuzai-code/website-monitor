@@ -1,16 +1,14 @@
 version: '3.7'
 services:
-  vue:
+  vueapp:
     container_name: vue
     build: 
       context: ./MonitorVue # Dockerfile所在目录
       dockerfile: Dockerfile  # Dockerfile名称
     ports:
-      - "5000:5000"
-    depends_on:
-      - django
-    volumes:
-      - ./MonitorVue:/app
+      - "80:80"
+    environment:
+      - NODE_ENV=production
     networks:
       - monitor
     restart: unless-stopped
@@ -23,9 +21,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./MonitorDjango:/app
-      - /home/website-monitor-dev/MonitorDjango/media/:/app/media
-      - ./MonitorDjango/config_prod.ini:/app/config.ini
+      - /home/yuzai/Project/website-monitor-pro/MonitorDjango:/app
+      - //home/yuzai/Project/log:/app/media
+      - /home/yuzai/Project/website-monitor-pro/MonitorDjango/config_prod.ini:/app/config.ini
     networks:
       - monitor
     depends_on:
