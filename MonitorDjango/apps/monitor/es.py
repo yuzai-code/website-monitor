@@ -73,7 +73,13 @@ class TotalAggregation(ElasticsearchQueryHelper):
         # 排除爬虫
         s = s.query('bool', must_not=[Q("wildcard", user_agent="*googlebot*"),
                                       Q("wildcard", user_agent="*bingbot*"),
-                                      Q("wildcard", path="*woff*"), ])
+                                      Q("wildcard", user_agent="*neobot*"),
+                                      Q("wildcard", path="*woff*"),
+                                      Q("wildcard", path="*.js"),
+                                      Q("wildcard", path="*.jpg"),
+                                      Q("wildcard", path="*.png"),
+                                      Q("wildcard", path="*.css"),
+                                      ])
         # 添加时间范围查询，限制为过去两周
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
 

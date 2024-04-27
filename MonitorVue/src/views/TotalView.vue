@@ -12,9 +12,9 @@
     </div>
 </template>
 <script setup>
-import { ref, onMounted,  } from 'vue'
-import Chart from 'primevue/chart'
-import axiosInstance from '@/axiosConfig.ts'
+import axiosInstance from '@/axiosConfig.ts';
+import Chart from 'primevue/chart';
+import { onMounted, ref, } from 'vue';
 
 
 
@@ -23,18 +23,26 @@ const chartOptions = ref(null)
 
 const transformDataToChartData = (apiData) => {
     const labels = apiData.map(entry => entry.visit_date);
-    const totalVisitData = apiData.map(entry => entry.google_visit);
+    const googleVisitData = apiData.map(entry => entry.google_visit);
     const totalIPData = apiData.map(entry => entry.total_ip);
     const googleBotData = apiData.map(entry => entry.google_bot);
+    const totalVisitData = apiData.map(entry => entry.total_visit);
 
     return {
         labels,
         datasets: [
             {
                 label: '来自 Google 的访问量',
-                data: totalVisitData,
+                data: googleVisitData,
                 fill: false,
                 borderColor: '#42A5F5',
+                tension: 0.1
+            },
+            {
+                label: 'Googlebot 数',
+                data: googleBotData,
+                fill: false,
+                borderColor: '#66BB6A',
                 tension: 0.1
             },
             {
@@ -45,12 +53,13 @@ const transformDataToChartData = (apiData) => {
                 tension: 0.1
             },
             {
-                label: 'Googlebot 数',
-                data: googleBotData,
+                label: '所有访问量',
+                data: totalVisitData,
                 fill: false,
-                borderColor: '#66BB6A',
+                borderColor: '#938296',
                 tension: 0.1
             }
+
         ]
     };
 }

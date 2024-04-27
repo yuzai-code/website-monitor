@@ -11,7 +11,7 @@ class TotalSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TotalModel
-        fields = ['visit_date', 'google_visit', 'total_ip', 'google_bot']
+        fields = ['visit_date', 'google_visit', 'total_ip', 'google_bot', 'total_visit']
 
 
 class VisitSerializer(serializers.ModelSerializer):

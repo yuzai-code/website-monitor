@@ -106,12 +106,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
-import axiosInstance from '@/axiosConfig'
-import { useRoute } from 'vue-router'
-import Card from 'primevue/card';          // optional
+import axiosInstance from '@/axiosConfig';
 import { FilterMatchMode, FilterOperator } from 'primevue/api';
-import Dropdown from 'primevue/dropdown';      // optional
+import Card from 'primevue/card'; // optional
+import Dropdown from 'primevue/dropdown'; // optional
+import { onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 
 const route = useRoute()  // 获取路由参数
 const WebsiteDetail = ref([])
