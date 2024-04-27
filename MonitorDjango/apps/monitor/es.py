@@ -34,24 +34,17 @@ class ElasticsearchQueryHelper:
             return []
 
 
-class SpiderAggregation:
+class SpiderAggregation(ElasticsearchQueryHelper):
     """
-    爬虫聚合
+    统计常见的爬虫访问情况
     """
 
-    def __init__(self, index, domain, user_id):
-        self.index = index
-        self.user_id = user_id
-        self.helper = ElasticsearchQueryHelper(index=index, user_id=user_id)
-        self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
-        self.domain = domain
-
-    def get_spider_aggregation(self, remote_addr):
-        # 创建一个查询实例，指定使用的Elasticsearch实例和索引
-        s = Search(using=self.es, index=self.index)
-        s = self.helper.filter_by_user_id(s)
-        response = s.execute()
-        return response.aggregations.ip.buckets
+    def __init__(self, index, user_id):
+        super().__init__(index=index, user_id=user_id)
+        self.included_user_agents = [
+            "*Googlebot*",  # goolebot
+            "*bingbot*",  # bingbot
+        ]
 
 
 class TotalAggregation(ElasticsearchQueryHelper):
@@ -65,10 +58,38 @@ class TotalAggregation(ElasticsearchQueryHelper):
         self.two_weeks_ago = datetime.now() - timedelta(weeks=2)  # 计算两周前的日期)
         self.two_weeks_ago_str = self.two_weeks_ago.strftime('%Y-%m-%dT%H:%M:%S')  # 转换为适合Elasticsearch的日期格式字符串)
         self.excluded_user_agents = [
-            ".*Googlebot.*",  # 爬虫
-            ".*bingbot.*",
+            "*Googlebot*",  # 爬虫
+            "*bingbot*",
         ]
         self.included_user_agents = "compatible; Googlebot/2.1; +http://www.google.com/bot.html",
+
+    def total_visit(self):
+        """
+        统计过去两周内的总访问量
+        :return:
+        """
+        s = Search(using=self.es, index=self.index)
+        s = self.filter_by_user_id(s)
+        # 排除爬虫
+        s = s.query('bool', must_not=[Q("wildcard", user_agent="*googlebot*"),
+                                      Q("wildcard", user_agent="*bingbot*"),
+                                      Q("wildcard", path="*woff*"), ])
+        # 添加时间范围查询，限制为过去两周
+        s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
+
+        s.aggs.bucket(
+            'visits_per_day',
+            'date_histogram',
+            field='visit_time',
+            calendar_interval='day',
+            min_doc_count=0,
+            extended_bounds={
+                "min": self.two_weeks_ago_str,
+                "max": datetime.now().strftime('%Y-%m-%dT%H:%M:%S')  # 使用当前时间作为结束时间
+            }
+        )
+        response = s.execute()
+        return response.aggregations.visits_per_day.buckets
 
     def google_visit(self):
         """
@@ -87,23 +108,7 @@ class TotalAggregation(ElasticsearchQueryHelper):
         s = s.query("wildcard", http_referer="*google.com*")
 
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
-        # # 构建排除特定用户代理和静态文件路径的查询
-        # excluded_queries = [Q("regexp", user_agent=ua) for ua in self.excluded_user_agents] + static_paths
-        #
-        # # 添加排除用户代理为空的条件
-        # excluded_queries.append(~Q("exists", field="user_agent"))
 
-        # 添加时间范围查询，限制为过去两周
-        # date_range_query = Q('range', visit_time={'gte': self.two_weeks_ago_str})
-
-        # 将查询条件组合起来
-        # query = Q('bool', must=[date_range_query], must_not=excluded_queries)
-        # query = Q('bool', must=[date_range_query])
-
-        # 添加查询
-        # s = s.query(query)
-
-        # 定义日期直方图聚合，以visit_time字段进行按天聚合
         s.aggs.bucket(
             'visits_per_day',
             'date_histogram',
@@ -166,7 +171,8 @@ class TotalAggregation(ElasticsearchQueryHelper):
 
     def google_bot(self):
         """
-        统计所有来自Google的爬虫，不使用正则表达式进行匹配。
+        统计所有来自Google的爬虫，不使用正则表达式
+        Q("wildcard), user_agent={"*Bingbot*进行匹配,。
         """
         s = Search(using=self.es, index=self.index)
 
@@ -213,8 +219,9 @@ class IpAggregation(ElasticsearchQueryHelper):
         """
         search_query = Search(using=self.es, index=self.index)
         search_query = search_query.query("bool", must_not=[
-            Q("wildcard", user_agent="*Googlebot*"),
+            Q("wildcard", user_agent="*googlebot*"),
             Q("wildcard", user_agent="*neobot*"),
+            Q("wildcard", user_agent="*bingbot*"),
             Q("wildcard", user_agent="python-requests*"),
             Q("wildcard", path="*/static/*"),
             Q("wildcard", path="*/media/*"),

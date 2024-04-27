@@ -1,8 +1,13 @@
+import type {
+  AxiosInstance,
+  AxiosRequestHeaders,
+  AxiosResponse,
+  InternalAxiosRequestConfig
+} from 'axios'
 import axios from 'axios'
-import type { AxiosInstance, AxiosRequestConfig, AxiosRequestHeaders, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 
 const axiosInstance: AxiosInstance = axios.create({
-  baseURL: 'http://192.168.0.163:8000/',
+  baseURL: 'http://192.168.0.163:8001/',
   timeout: 5001
 })
 
@@ -10,7 +15,7 @@ const axiosInstance: AxiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // 使用类型断言确保 config.headers 的类型为 AxiosRequestHeaders
-    config.headers = (config.headers as AxiosRequestHeaders)
+    config.headers = config.headers as AxiosRequestHeaders
 
     // 检查当前请求的 URL，判断是否是登录或注册请求
     if (!config.url?.endsWith('/login') && !config.url?.endsWith('/register/')) {

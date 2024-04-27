@@ -15,6 +15,7 @@ class TotalModel(BaseModel):
     google_visit = models.IntegerField(verbose_name='来自google的总访问量', default=0)
     total_ip = models.IntegerField(verbose_name='总访问IP数', default=0)
     google_bot = models.IntegerField(verbose_name='GoogleBot访问量', default=0)
+    total_visit = models.IntegerField(verbose_name="统计访问量", default=0)
     visit_date = models.DateField(default=None, verbose_name='日期', db_index=True)
 
     class Meta:

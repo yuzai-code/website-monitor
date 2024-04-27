@@ -315,7 +315,7 @@ class IpListAPIView(APIView):
             'ips_hour': ips_hour,
             'ips_min': ips_min,
         }
-        print(data)
+        # print(data)
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -357,5 +357,7 @@ class TotalAPIView(APIView):
         # 获取过去两周的数据
         total = TotalModel.objects.filter(user=user, visit_date__range=(two_weeks_ago, today))
         data = TotalSerializer(total, many=True).data
-        print(data)
+        total_agg = TotalAggregation(index='visit_new', user_id=user.id)
+        es_total_visit = total_agg.total_visit()
+
         return Response(data, status=status.HTTP_200_OK)

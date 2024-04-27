@@ -39,26 +39,32 @@ def total(results, user_id):
 
     # 调用es进行汇总
     total_agg = TotalAggregation(index='visit_new', user_id=user_id)
-    total_visit = total_agg.google_visit()
-    visit_count = [bucket.doc_count for bucket in total_visit]
+    # 聚合来自google的访问量
+    google_visit = total_agg.google_visit()
+    google_visit_lst = [bucket.doc_count for bucket in google_visit]
+    # 聚合所有不同的ip
     es_ips = total_agg.total_ip()
-    ip_date = [bucket.key_as_string for bucket in es_ips]
+    ip_date_lst = [bucket.key_as_string for bucket in es_ips]
     # 将时间字符串转换为日期
-    ip_date = [datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ').date() for date in ip_date]
-    ip_count = [bucket.unique_ips.value for bucket in es_ips]
-    es_google_ips = total_agg.google_bot()
-    google_ips_counts = [bucket.doc_count for bucket in es_google_ips]
-    # logging.info(f'user_id: {user_id}, visit_count: {visit_count}, ip_date: {ip_date}, ip_count: {ip_count}, '
-    #              f'google_ips_counts: {google_ips_counts}')
+    ip_date = [datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ').date() for date in ip_date_lst]
+    ip_count_lst = [bucket.unique_ips.value for bucket in es_ips]
+    # 聚合来自goole的爬虫
+    es_googlebot = total_agg.google_bot()
+    googlebot_lst = [bucket.doc_count for bucket in es_googlebot]
+    # 聚合统计所有的访问量
+    es_total_visit = total_agg.total_visit()
+    total_visit_lst = [bucket.doc_count for bucket in es_total_visit]
 
     user_instance = User.objects.get(id=user_id)
     # 保存到数据库
-    for i in range(len(visit_count)):
-        # print(ip_date[i], visit_count[i], ip_count[i], google_ips_counts[i])
+    for i in range(len(google_visit_lst)):
         # 根据日期查询是否存在,来进行更新或者创建
         TotalModel.objects.update_or_create(user=user_instance, visit_date=ip_date[i],
-                                            defaults={'google_visit': visit_count[i], 'total_ip': ip_count[i],
-                                                      'google_bot': google_ips_counts[i]})
+                                            defaults={'google_visit': google_visit_lst[i],
+                                                      'total_ip': ip_count_lst[i],
+                                                      'google_bot': googlebot_lst[i],
+                                                      'total_visit': total_visit_lst[i],
+                                                      })
 
 
 @shared_task(name='handle_file', queue='handle_file')

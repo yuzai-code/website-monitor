@@ -21,7 +21,7 @@
               <DataTable :value="ips_data.ips_all">
                 <Column field="ip" header="IP">
                   <template #body="{ data }">
-                    <router-link :to="{ name: 'WebsiteDetail', params: { ip: data.ip, date: formattedDate } }">
+                    <router-link :to="{ name: 'WebsiteDetail', params: { ip: data.ip } }">
                       {{ data.ip }}
                     </router-link>
                   </template>
@@ -95,11 +95,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, } from 'vue';
-import axiosInstance from '@/axiosConfig'
+import axiosInstance from '@/axiosConfig';
+import Button from 'primevue/button';
 import Calendar from 'primevue/calendar';
 import Card from 'primevue/card';
-import Button from 'primevue/button';
+import { computed, onMounted, ref, } from 'vue';
 
 
 const ips_data = ref({

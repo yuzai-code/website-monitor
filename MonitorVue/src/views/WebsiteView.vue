@@ -14,9 +14,9 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, onMounted  } from 'vue'
-import DataTable from '@/components/DataTable.vue'
-import axiosInstance from '@/axiosConfig'
+import axiosInstance from '@/axiosConfig';
+import DataTable from '@/components/DataTable.vue';
+import { onMounted, ref } from 'vue';
 
 
 const customers = ref([])
@@ -57,6 +57,11 @@ const submit = async () => {
     })
     console.log('Response:', response.data);
     const newData = response.data.website_list;
+    if (response.data.after_key === null) {
+      // 如果没有下一页数据，隐藏加载更多按钮
+      console.log('No more data');
+      return;
+    }
     // 将新获取的数据与已有的数据拼接起来
     customers.value = customers.value.concat(newData);
     afterKey.value = response.data.after_key;

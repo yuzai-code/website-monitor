@@ -1,12 +1,14 @@
-version: '3.7'
+version: "3.7"
 services:
   vueapp:
     container_name: vue
-    build: 
+    build:
       context: ./MonitorVue # Dockerfile所在目录
-      dockerfile: Dockerfile  # Dockerfile名称
+      dockerfile: Dockerfile # Dockerfile名称
     ports:
       - "80:80"
+    volumes:
+      - ./MonitorVue/dist:/app
     environment:
       - NODE_ENV=production
     networks:
@@ -15,9 +17,9 @@ services:
 
   django:
     container_name: django
-    build: 
-      context: ./MonitorDjango  # Dockerfile所在目录
-      dockerfile: Dockerfile  # Dockerfile名称
+    build:
+      context: ./MonitorDjango # Dockerfile所在目录
+      dockerfile: Dockerfile # Dockerfile名称
     ports:
       - "8000:8000"
     volumes:
@@ -41,7 +43,7 @@ services:
     networks:
       - monitor
     restart: unless-stopped
-    
+
   elasticsearch:
     container_name: elasticsearch
     image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
@@ -59,7 +61,7 @@ services:
     networks:
       - monitor
     restart: unless-stopped
-  
+
   postgres:
     container_name: postgres
     image: postgres
