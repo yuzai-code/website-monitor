@@ -139,7 +139,10 @@ class WebsiteListAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
         # print("当前用户：", request.user.id)
-        after_key = request.query_params.get('after_key')
+        after_key = request.query_params.get('after_key[domain]', None)
+        print('after_key', after_key)
+        if after_key:
+            after_key = {"domain": after_key}
         domain = request.query_params.get('search_text')
         # print('domain', domain)
         website_es = WebsiteES(index='visit_new', user_id=request.user.id)
@@ -152,9 +155,11 @@ class WebsiteListAPIView(APIView):
             return Response(data, status=status.HTTP_200_OK)
 
         website_list, after_key = website_es.get_website_list(after_key=after_key)
+        if after_key: # 将after_key转换为字典，以便序列化，为空时不需要转换否则会报错
+            after_key = after_key.to_dict()
         data = {
             'website_list': website_list,
-            'after_key': after_key.to_dict(),
+            'after_key': after_key,
         }
         # print('data')
         return Response(data, status=status.HTTP_200_OK)

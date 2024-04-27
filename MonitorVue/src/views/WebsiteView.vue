@@ -18,7 +18,6 @@ import axiosInstance from '@/axiosConfig';
 import DataTable from '@/components/DataTable.vue';
 import { onMounted, ref } from 'vue';
 
-
 const customers = ref([])
 const afterKey = ref(null);
 const value = ref("");
@@ -41,13 +40,13 @@ const search = async (event) => {
 
 const handleLastPageReached = () => {
   // 当 DataTable 组件触发 reach-last-page 事件时，调用此函数
-  console.log('Last page reached,12312312');
+  console.log('Last page reached');
   // 用于加载下一页数据
   submit();
 };
 
 const submit = async () => {
-
+  console.log('Sending request with afterKey:', afterKey.value);
   try {
     const response = await axiosInstance.get('api/website_list/', {
       params: {
@@ -56,14 +55,15 @@ const submit = async () => {
       }
     })
     console.log('Response:', response.data);
-    if (response.data.website_list.length === 0) {
-      customers.value = customers.value.concat(response.data.website_list);
-    } else if (response.data.website_list.length > 0) {
+    // 将后端分传递过来的数据与前面的数据加起来传递到 customers 中
+    if (afterKey.value) {
+      customers.value = [...customers.value, ...response.data.website_list];
+    } else {
       customers.value = response.data.website_list;
     }
 
     afterKey.value = response.data.after_key;
-    console.log(afterKey.value);
+    console.log('Updated afterKey:', afterKey.value);
   } catch (error) {
     // console.error('Request failed:', error);
   }
@@ -73,8 +73,6 @@ const submit = async () => {
 onMounted(() => {
   submit();
 });
-
-
 
 </script>
 

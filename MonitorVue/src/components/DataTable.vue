@@ -22,9 +22,9 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, ref, defineEmits, watch } from 'vue'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
+import { defineEmits, defineProps, ref, watch } from 'vue';
 
 // 使用 defineProps 定义接收的 prop
 const props = defineProps({
@@ -51,7 +51,7 @@ const onPage = function (event) {
   if (currentPage === totalPages) {
     // 触发自定义事件 reach-last-page
     emit('reach-last-page');
-    console.log('Reach last page');
+    // console.log('Reach last page');
   }
 };
 </script>

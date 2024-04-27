@@ -12,6 +12,27 @@ class ElasticsearchQueryHelper:
         self.es = Elasticsearch([f"http://{config['es']['ES_URL']}"])
         self.search = Search(using=self.es, index=self.index)
 
+    def exclude_filter(self, search):
+        """
+        排除爬虫和静态资源
+        :param search:
+        :return:
+        """
+        search = search.query('bool', must_not=[Q("wildcard", user_agent="*googlebot*"),
+                                                Q("wildcard", user_agent="*bingbot*"),
+                                                Q("wildcard", user_agent="*neobot*"),
+                                                Q("wildcard", path="*woff*"),
+                                                Q("wildcard", path="*.js"),
+                                                Q("wildcard", path="*.jpg"),
+                                                Q("wildcard", path="*.png"),
+                                                Q("wildcard", path="*.css"),
+                                                Q("wildcard", path="*.json"),
+                                                Q("wildcard", path="*.ico"),
+                                                Q("wildcard", path="*.svg"),
+                                                Q("wildcard", path="*.js.php"),
+                                                ])
+        return search
+
     def filter_by_user_id(self, search):
         if self.user_id:
             search = search.filter('term', user_id=self.user_id)
@@ -54,7 +75,7 @@ class TotalAggregation(ElasticsearchQueryHelper):
 
     def __init__(self, index, user_id):
         super().__init__(index=index, user_id=user_id)
-        # self.helper = ElasticsearchQueryHelper(index=index, user_id=user_id)
+        # 初始化方法，设置指定的索引和用户ID，并计算两周前的日期
         self.two_weeks_ago = datetime.now() - timedelta(weeks=2)  # 计算两周前的日期)
         self.two_weeks_ago_str = self.two_weeks_ago.strftime('%Y-%m-%dT%H:%M:%S')  # 转换为适合Elasticsearch的日期格式字符串)
         self.excluded_user_agents = [
@@ -66,23 +87,16 @@ class TotalAggregation(ElasticsearchQueryHelper):
     def total_visit(self):
         """
         统计过去两周内的总访问量
-        :return:
+        :return: 返回过去两周内按天统计的访问量数据
         """
         s = Search(using=self.es, index=self.index)
         s = self.filter_by_user_id(s)
-        # 排除爬虫
-        s = s.query('bool', must_not=[Q("wildcard", user_agent="*googlebot*"),
-                                      Q("wildcard", user_agent="*bingbot*"),
-                                      Q("wildcard", user_agent="*neobot*"),
-                                      Q("wildcard", path="*woff*"),
-                                      Q("wildcard", path="*.js"),
-                                      Q("wildcard", path="*.jpg"),
-                                      Q("wildcard", path="*.png"),
-                                      Q("wildcard", path="*.css"),
-                                      ])
+        # 排除爬虫和指定文件类型
+        s = self.exclude_filter(s)
         # 添加时间范围查询，限制为过去两周
         s = s.query('range', visit_time={'gte': self.two_weeks_ago_str})
 
+        # 按天进行聚合统计
         s.aggs.bucket(
             'visits_per_day',
             'date_histogram',
@@ -224,16 +238,7 @@ class IpAggregation(ElasticsearchQueryHelper):
         创建一个基本的搜索查询，排除了一些常见的机器人访问和静态资源访问
         """
         search_query = Search(using=self.es, index=self.index)
-        search_query = search_query.query("bool", must_not=[
-            Q("wildcard", user_agent="*googlebot*"),
-            Q("wildcard", user_agent="*neobot*"),
-            Q("wildcard", user_agent="*bingbot*"),
-            Q("wildcard", user_agent="python-requests*"),
-            Q("wildcard", path="*/static/*"),
-            Q("wildcard", path="*/media/*"),
-            Q("wildcard", path="*/favicon.ico")
-        ])
-
+        search_query = self.exclude_filter(search_query)
         if self.domain:
             search_query = search_query.filter('term', domain__keyword=self.domain)
 
@@ -242,7 +247,6 @@ class IpAggregation(ElasticsearchQueryHelper):
 
         if additional_filters:
             for filt in additional_filters:
-                print(filt)
                 search_query = search_query.filter('range', **filt)
 
         return search_query
@@ -311,12 +315,6 @@ class WebsiteES(ElasticsearchQueryHelper):
         """
         data_list = []
         search = self.search
-        # search = search.exclude("match", user_agent="neobot")
-        # search = search.exclude("match", user_agent="Googlebot")
-        # search = search.exclude("match", path="*/static/*")
-        # search = search.exclude("match", path="*/media/*")
-        # search = search.exclude("match", path="*/favicon.ico")
-
         search = self.filter_by_user_id(search)
 
         if domain:
@@ -332,6 +330,7 @@ class WebsiteES(ElasticsearchQueryHelper):
         }
 
         if after_key:
+            print('1111')
             composite_agg['after'] = after_key  # 用于继续从上一次的最后位置开始
         # print('1111', after_key)
         search.aggs.bucket('by_domain', 'composite', **composite_agg) \
@@ -340,9 +339,7 @@ class WebsiteES(ElasticsearchQueryHelper):
 
         response = search.execute()
 
-        # 获取聚合结果
         aggs = response.aggregations.by_domain
-
         for bucket in aggs.buckets:
             domain = bucket.key.domain
             ips = bucket.ips.value
@@ -354,8 +351,7 @@ class WebsiteES(ElasticsearchQueryHelper):
                 'visits': bucket.doc_count,
             })
 
-        # 检查是否有更多页
-        after_key = aggs.after_key if 'after_key' in aggs else None
+        after_key = getattr(aggs, 'after_key', None)
         # print('222', after_key)
         return data_list, after_key
 
@@ -364,6 +360,7 @@ class WebsiteES(ElasticsearchQueryHelper):
         search = self.search
         search = self.filter_by_user_id(search)
 
+        search = self.exclude_filter(search)
         if domain:
             search = search.filter('term', domain__keyword=domain)
         elif ip:
@@ -382,7 +379,6 @@ class WebsiteES(ElasticsearchQueryHelper):
         # 如果提供了 last_sort_value，使用它来获取下一页数据
         if last_sort_value:
             search = search.extra(search_after=[last_sort_value])
-
         # 执行搜索
         response = search.execute()
 
