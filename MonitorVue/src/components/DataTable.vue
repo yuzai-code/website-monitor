@@ -9,7 +9,7 @@
           </router-link>
         </template> -->
       </Column>
-      <Column field="googlebot_count" header="GoogleBot" sortable></Column>
+      <Column field="google_bot" header="GoogleBot" sortable></Column>
       <Column field="google_referer" header="Google来源" sortable></Column>
       <Column field="visits" header="访问量" sortable></Column>
       <!-- <Column field="visitor_total" header="访客量"></Column> -->
@@ -47,7 +47,7 @@ const totalRecords = ref(props.customers.length);
 
 // 监听 props.customers 的变化，更新 totalRecords 的值
 watch(() => props.customers, (newValue) => {
-  totalRecords.value = newValue.length;
+  // totalRecords.value = newValue.length;
 });
 
 const onPage = function (event) {

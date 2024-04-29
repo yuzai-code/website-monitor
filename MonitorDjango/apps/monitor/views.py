@@ -15,9 +15,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .es import IpAggregation, SpiderAggregation, TotalAggregation, WebsiteES
-from .models import VisitModel, WebsiteModel, LogFileModel, UserSettingsModel, TotalModel
-from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer, TotalSerializer
-from .tasks import handle_uploaded_file_task
+from .models import VisitModel, WebsiteModel, LogFileModel, UserSettingsModel, TotalModel, TotalDayModel
+from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer, TotalSerializer, TotalDaySerializer
+from .tasks import handle_uploaded_file_task, total_day
 from django.http import JsonResponse
 from celery.result import AsyncResult
 
@@ -143,34 +143,26 @@ class WebsiteListAPIView(APIView):
 
     def get(self, request, *args, **kwargs):
         # print("当前用户：", request.user.id)
-        after_key = request.query_params.get('after_key[domain]', None)
+        # after_key = request.query_params.get('after_key[domain]', None)
         date_str = request.query_params.get('date')
+        domain = request.query_params.get('search_text')
         # 格式化日期,只要日期部分
         date_format = datetime.fromisoformat(date_str.rstrip('Z'))
         date_only_str = date_format.date().isoformat()
-        # print('date_only_str', date_only_str)
-        # print('after_key', after_key)
-        if after_key:
-            after_key = {"domain": after_key}
-        domain = request.query_params.get('search_text')
-        # print('domain', domain)
-        website_es = WebsiteES(index='visit_new', user_id=request.user.id)
-        if domain:
-            website = website_es.get_website_list(domain=domain, date=date_only_str, after_key=after_key)
-            data = {
-                'website_list': website[0],
-            }
-            return Response(data, status=status.HTTP_200_OK)
 
-        website_list, after_key = website_es.get_website_list(date=date_only_str, after_key=after_key)
-        if after_key:  # 将after_key转换为字典，以便序列化，为空时不需要转换否则会报错
-            after_key = after_key.to_dict()
-        data = {
-            'website_list': website_list,
-            'after_key': after_key,
-        }
-        # print('data')
-        return Response(data, status=status.HTTP_200_OK)
+        if domain:
+            total_day_query = TotalDayModel.objects.filter(domain=domain, user=request.user,
+                                                              visit_date=date_only_str)
+        else:
+            # 从数据库中获取数据
+            total_day_query = TotalDayModel.objects.filter(user=request.user, visit_date=date_only_str)
+        if not total_day_query:  # 如果数据库中没有当天的数据，就调用celery任务进行计算
+            total_day(request.user.id, date=date_only_str)
+
+        # 调用序列化器
+        total_day_serializer = TotalDaySerializer(total_day_query, many=True)
+
+        return Response(total_day_serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         website_id = request.data.get('id', '')

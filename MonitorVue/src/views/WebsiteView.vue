@@ -55,8 +55,8 @@ const search = async (event) => {
         date: date.value,
       }
     })
-    items.value = response.data.website_list.map((item) => item.domain);
-    customers.value = response.data.website_list;
+    items.value = response.data.map((item) => item.domain);
+    customers.value = response.data;
     loading.value = true;
     setTimeout(() => {
       loading.value = false;
@@ -82,15 +82,9 @@ const submit = async () => {
         date: date.value,
       }
     })
-    console.log('Response:', response.data);
-    // 将后端分传递过来的数据与前面的数据加起来传递到 customers 中
-    if (afterKey.value) {
-      customers.value = [...customers.value, ...response.data.website_list];
-    } else {
-      customers.value = response.data.website_list;
-    }
+    // console.log('Response:', response.data);
 
-    afterKey.value = response.data.after_key;
+    customers.value = response.data;
     loading.value = true;
     setTimeout(() => {
       loading.value = false;

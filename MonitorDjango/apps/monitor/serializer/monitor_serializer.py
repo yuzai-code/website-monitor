@@ -1,6 +1,16 @@
 from rest_framework import serializers
 
-from monitor.models import WebsiteModel, VisitModel, TotalModel
+from monitor.models import WebsiteModel, VisitModel, TotalModel, TotalDayModel
+
+
+class TotalDaySerializer(serializers.ModelSerializer):
+    """
+    每天汇总的序列化器
+    """
+
+    class Meta:
+        model = TotalDayModel
+        fields = ['domain', 'user', 'google_referer', 'ips', 'google_bot', 'visits', 'data_transfers', 'visit_date']
 
 
 class TotalSerializer(serializers.ModelSerializer):
