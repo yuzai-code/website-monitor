@@ -1,7 +1,9 @@
 // FilterDisplay.vue
 
 <template>
-  <!-- Your component template -->
+  <div>
+    <!-- Your component template -->
+  </div>
 </template>
 
 <script>

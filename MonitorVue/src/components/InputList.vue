@@ -4,8 +4,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, defineEmits } from 'vue'
-import axiosInstance from '@/axiosConfig'
+import axiosInstance from '@/axiosConfig';
+import { onMounted, ref } from 'vue';
 
 const website = ref([])
 const selectedItem = ref(null)

@@ -71,31 +71,35 @@ class LogUpload(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+        # 修改为多个文件上传处理
         try:
-            file = self.request.FILES['upload_file']
-            domain = self.request.POST.get('website', None)
+            file_lst = self.request.FILES.getlist('upload_file')
+            # file = self.request.FILES['upload_file']
+            for file in file_lst:
 
-            with transaction.atomic():
-                # 保存文件
-                log_file = LogFileModel(
-                    user=request.user,
-                    upload_file=file,
-                )
-                log_file.save()
+                domain = self.request.POST.get('website', None)
 
-            log_file = LogFileModel.objects.get(id=log_file.id)
-            file_name = log_file.upload_file.name
-            file_path = f'/home/yuzai/Project/website-monitor-dev/MonitorDjango/media/{file_name}'
-            user_settins = UserSettingsModel.objects.filter(user=request.user).first()
-            if not user_settins:
-                return Response({'message': '请先设置nginx日志格式'}, status=status.HTTP_401_UNAUTHORIZED)
-            nginx_format = user_settins.nginx_log_format
-            user_id = log_file.user.id
-            # 调用celery任务
-            result = handle_uploaded_file_task.delay(nginx_format, file_path, user_id, domain)
-            # handle_uploaded_file_task(nginx_format, file_path, user_id, domain)
-            # 获取任务id
-            task_id = result.id
+                with transaction.atomic():
+                    # 保存文件
+                    log_file = LogFileModel(
+                        user=request.user,
+                        upload_file=file,
+                    )
+                    log_file.save()
+
+                log_file = LogFileModel.objects.get(id=log_file.id)
+                file_name = log_file.upload_file.name
+                file_path = f'/home/yuzai/Project/website-monitor-dev/MonitorDjango/media/{file_name}'
+                user_settins = UserSettingsModel.objects.filter(user=request.user).first()
+                if not user_settins:
+                    return Response({'message': '请先设置nginx日志格式'}, status=status.HTTP_401_UNAUTHORIZED)
+                nginx_format = user_settins.nginx_log_format
+                user_id = log_file.user.id
+                # 调用celery任务
+                result = handle_uploaded_file_task.delay(nginx_format, file_path, user_id, domain)
+                # handle_uploaded_file_task(nginx_format, file_path, user_id, domain)
+                # 获取任务id
+                task_id = result.id
 
             return Response({'message': '文件上传成功，正在后台处理',
                              'task_id': task_id

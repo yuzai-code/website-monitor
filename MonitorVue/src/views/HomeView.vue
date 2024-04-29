@@ -17,8 +17,8 @@
         域名(选填)：
         <InputText type="text" v-model="domain" />
         <Toast />
-        <FileUpload mode="basic" ref="fileUpload" name="upload_file" url="/api/upload"
-          accept=".log,application/gzip,.gz" :maxFileSize="1000000000" customUpload :auto="false" />
+        <FileUpload ref="fileUpload" name="upload_file" url="/api/upload" accept=".log,application/gzip,.gz"
+          :maxFileSize="1000000000" customUpload :auto="false" :multiple="true" />
         <Button label="上传" @click="submit_up" />
       </div>
 
@@ -31,13 +31,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import InputList from '@/components/InputList.vue'
-import ChartData from '@/components/ChartData.vue'
-import CardData from '@/components/CardData.vue'
 import axiosInstance from '@/axiosConfig'
-import moment from 'moment';
-import { useToast } from 'primevue/usetoast';
+import CardData from '@/components/CardData.vue'
+import ChartData from '@/components/ChartData.vue'
+import InputList from '@/components/InputList.vue'
+import moment from 'moment'
+import { useToast } from 'primevue/usetoast'
+import { onMounted, ref } from 'vue'
 
 
 const toast = useToast();
@@ -193,7 +193,7 @@ onMounted(async () => {
   padding: 20px;
   gap: 20px;
   /* 组件之间的间隙 */
-  background-color: #f5f5f5;
+  background-color: #f8fafc;
   /* 背景色 */
   border-radius: 8px;
   /* 圆角边框 */
