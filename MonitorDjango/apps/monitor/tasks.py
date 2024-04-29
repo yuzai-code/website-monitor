@@ -11,7 +11,7 @@ from elasticsearch.helpers import bulk
 from elasticsearch_dsl import connections, Search, Index
 from rest_framework.response import Response
 
-from monitor.es import TotalAggregation
+from monitor.es import TotalAggregation, WebsiteES
 
 sys.path.extend(['/home/yuzai/Desktop/WebsiteMonitor'])
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "WebsiteMonitor.settings")
@@ -28,6 +28,32 @@ from WebsiteMonitor.settings import config
 # 建立Elasticsearch连接
 # connections.create_connection(hosts=['localhost:9200'], timeout=20)
 elasticsearch_client = connections.create_connection(hosts=[config['es']['ES_URL']], timeout=20)
+
+
+@shared_task(name='total_day', queue='handle_file')
+def total_day(user_id):
+    """
+每日统计
+    :param user_id:
+    :return:
+    """
+    date = datetime.now().date()
+
+    website_es = WebsiteES(index='visit_new', user_id=user_id)
+
+    website_list, after_key = website_es.get_website_list(date=date)
+    while after_key:
+        website_list, after_key = website_es.get_website_list(date=date, after_key=after_key)
+        # 保存到数据库
+        for website in website_list:
+            # 根据日期查询是否存在,来进行更新或者创建
+            VisitModel.objects.update_or_create(user_id=user_id, domain=website['domain'], visit_date=date,
+                                                defaults={'google_referer': website['google_referer'],
+                                                          'ips': website['ips'],
+                                                          'google_bot': website['google_bot'],
+                                                          'visits': website['visits'],
+                                                          'data_transfers': website['data_transfers'],
+                                                          })
 
 
 @shared_task(name='total', queue='handle_file')
@@ -93,7 +119,7 @@ def handle_uploaded_file_task(nginx_format, file_path, user_id, domain):
             tasks.append(process_log_batch.s(batch_lines, domain, pattern_string, user_id))
 
     # 使用chord来确保所有process_log_batch任务完成后调用total任务
-    result = chord(tasks)(total.s(user_id=user_id))
+    result = chord(tasks)(total.s(user_id=user_id))(total_day.s(user_id=user_id))
 
 
 @shared_task(name='process_log_batch', queue='handle_file')

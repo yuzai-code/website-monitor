@@ -148,12 +148,12 @@ class WebsiteListAPIView(APIView):
         # 格式化日期,只要日期部分
         date_format = datetime.fromisoformat(date_str.rstrip('Z'))
         date_only_str = date_format.date().isoformat()
-        print('date_only_str', date_only_str)
+        # print('date_only_str', date_only_str)
         # print('after_key', after_key)
         if after_key:
             after_key = {"domain": after_key}
         domain = request.query_params.get('search_text')
-        print('domain', domain)
+        # print('domain', domain)
         website_es = WebsiteES(index='visit_new', user_id=request.user.id)
         if domain:
             website = website_es.get_website_list(domain=domain, date=date_only_str, after_key=after_key)

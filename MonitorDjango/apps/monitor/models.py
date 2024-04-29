@@ -6,6 +6,24 @@ from utils.basemodel import BaseModel
 
 
 # Create your models here.
+class TotalDayModel(BaseModel):
+    """
+    每日统计
+    """
+    domain = models.CharField(max_length=100, verbose_name='域名', blank=True, null=True, db_index=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, verbose_name='用户', null=True, blank=True)
+    google_referer = models.IntegerField(verbose_name='来自google的访问量', default=0)
+    ips = models.IntegerField(verbose_name='总访问IP数', default=0)
+    google_bot = models.IntegerField(verbose_name='GoogleBot访问量', default=0)
+    visits = models.IntegerField(verbose_name="统计访问量", default=0)
+    data_transfers = models.BigIntegerField(verbose_name='数据传输总量', blank=True, null=True)
+    visit_date = models.DateField(default=None, verbose_name='日期', db_index=True)
+
+    class Meta:
+        db_table = 't_total_day'
+        verbose_name = '每日统计'
+        verbose_name_plural = verbose_name
+
 
 class TotalModel(BaseModel):
     """

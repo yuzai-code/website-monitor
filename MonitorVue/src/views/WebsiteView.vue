@@ -6,7 +6,7 @@
         <AutoComplete v-model="value" dropdown :suggestions="items" @complete="search" />
       </div>
 
-      <Button label="查询" @click="submit" />
+      <Button label="查询" @click="submit" icon="pi pi-search" :loading="loading" />
       <Button label="前一天" @click="selectDate" severity="info" text raised />
       <Button label="今天" @click="selectDate" severity="info" text raised />
       <p>{{ formatterDate }}</p>
@@ -25,6 +25,9 @@ const afterKey = ref(null); // 管理分页的 afterKey
 const value = ref("");
 const items = ref([]);
 const date = ref(new Date()); // 日期, 默认为当前日期
+const loading = ref(false);
+
+
 
 const formatterDate = computed(() => {
   return date.value.toISOString().split('T')[0];
@@ -54,6 +57,10 @@ const search = async (event) => {
     })
     items.value = response.data.website_list.map((item) => item.domain);
     customers.value = response.data.website_list;
+    loading.value = true;
+    setTimeout(() => {
+      loading.value = false;
+    }, 2000);
   } catch (error) {
     // console.error('Request failed:', error);
   }
@@ -84,6 +91,10 @@ const submit = async () => {
     }
 
     afterKey.value = response.data.after_key;
+    loading.value = true;
+    setTimeout(() => {
+      loading.value = false;
+    }, 2000);
     console.log('Updated afterKey:', afterKey.value);
   } catch (error) {
     // console.error('Request failed:', error);
