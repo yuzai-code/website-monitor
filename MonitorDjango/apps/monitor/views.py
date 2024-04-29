@@ -77,7 +77,6 @@ class LogUpload(APIView):
             # file = self.request.FILES['upload_file']
             print(file_lst)
             for file in file_lst:
-                print(file.name)
                 domain = self.request.POST.get('website', None)
 
                 with transaction.atomic():
@@ -145,22 +144,26 @@ class WebsiteListAPIView(APIView):
     def get(self, request, *args, **kwargs):
         # print("当前用户：", request.user.id)
         after_key = request.query_params.get('after_key[domain]', None)
-        print('after_key', after_key)
+        date_str = request.query_params.get('date')
+        # 格式化日期,只要日期部分
+        date_format = datetime.fromisoformat(date_str.rstrip('Z'))
+        date_only_str = date_format.date().isoformat()
+        print('date_only_str', date_only_str)
+        # print('after_key', after_key)
         if after_key:
             after_key = {"domain": after_key}
         domain = request.query_params.get('search_text')
-        # print('domain', domain)
+        print('domain', domain)
         website_es = WebsiteES(index='visit_new', user_id=request.user.id)
         if domain:
-            website = website_es.get_website_list(domain=domain, after_key=after_key)
+            website = website_es.get_website_list(domain=domain, date=date_only_str, after_key=after_key)
             data = {
                 'website_list': website[0],
             }
-            print(data)
             return Response(data, status=status.HTTP_200_OK)
 
-        website_list, after_key = website_es.get_website_list(after_key=after_key)
-        if after_key: # 将after_key转换为字典，以便序列化，为空时不需要转换否则会报错
+        website_list, after_key = website_es.get_website_list(date=date_only_str, after_key=after_key)
+        if after_key:  # 将after_key转换为字典，以便序列化，为空时不需要转换否则会报错
             after_key = after_key.to_dict()
         data = {
             'website_list': website_list,

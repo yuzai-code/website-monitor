@@ -45,7 +45,9 @@ app.use(DialogService)
 app.use(router)
 // app.use(createPinia())
 app.use(pinia)
-
+app.config.globalProperties.$bytesToGB = function (bytes) {
+  return bytes / 1024 ** 3
+}
 const userStore = useUserStore()
 // Token存储在localStorage中
 const token = localStorage.getItem('authToken')

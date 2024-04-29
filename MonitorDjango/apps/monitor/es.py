@@ -305,7 +305,7 @@ class WebsiteES(ElasticsearchQueryHelper):
     def __init__(self, index, user_id):
         super().__init__(index=index, user_id=user_id)
 
-    def get_website_list(self, domain=None, page_size=1000, after_key=None):
+    def get_website_list(self, domain=None, date=None, page_size=1000, after_key=None):
         """
         获取网站列表
         :param page: 当前页码
@@ -317,9 +317,15 @@ class WebsiteES(ElasticsearchQueryHelper):
         search = self.search
         search = self.filter_by_user_id(search)
 
+        # 根据传递过来的日期来确定要查找今天的范围
+
+        date_filter = Q('range', visit_time={'gte': f'{date}T00:00:00', 'lte': f'{date}T23:59:59'})
+        # 如果有域名搜索条件
         if domain:
             wildcard_query = Q("wildcard", domain__keyword=f'*{domain}*')
-            search = search.query('bool', must=[wildcard_query])
+            search = search.query('bool', must=[wildcard_query, date_filter])
+        else:
+            search = search.query('bool', must=[date_filter])
         # print(search.to_dict())
         # 使用Composite Aggregation
         composite_agg = {
@@ -330,25 +336,32 @@ class WebsiteES(ElasticsearchQueryHelper):
         }
 
         if after_key:
-            print('1111')
             composite_agg['after'] = after_key  # 用于继续从上一次的最后位置开始
         # print('1111', after_key)
         search.aggs.bucket('by_domain', 'composite', **composite_agg) \
             .metric('ips', 'cardinality', field='remote_addr') \
+            .metric('googlebot_count', 'filter', filter=Q("wildcard", user_agent="*googlebot*")) \
+            .metric('google_referer', 'filter', filter=Q("wildcard", http_referer="*google.com*")) \
             .metric('data_transfers', 'sum', field='data_transfer')
 
         response = search.execute()
 
         aggs = response.aggregations.by_domain
         for bucket in aggs.buckets:
+            # print('googlebot',bucket.googlebot_count.to_dict())
+            # print('google_referer', bucket.google_referer.to_dict())
             domain = bucket.key.domain
             ips = bucket.ips.value
             data_transfers = bucket.data_transfers.value
+            googlebot_count = bucket.googlebot_count.doc_count if 'doc_count' in bucket.googlebot_count else 0
+            google_referer = bucket.google_referer.doc_count if 'doc_count' in bucket.google_referer else 0
             data_list.append({
                 'domain': domain,
                 'ips': ips,
                 'data_transfers': data_transfers,
                 'visits': bucket.doc_count,
+                'googlebot_count': googlebot_count,
+                'google_referer': google_referer,
             })
 
         after_key = getattr(aggs, 'after_key', None)

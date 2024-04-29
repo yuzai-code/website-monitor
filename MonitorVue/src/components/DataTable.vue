@@ -1,7 +1,7 @@
 <template>
   <div class="card">
-    <DataTable :value="customers" paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]" tableStyle="min-width: 50rem"
-      @page="onPage">
+    <DataTable :value="customers" paginator :rows="100" :rowsPerPageOptions="[50, 100, 150]"
+      tableStyle="min-width: 50rem" @page="onPage">
       <Column field="domain" header="网站">
         <!-- <template #body="slotProps">
           <router-link :to="{ name: 'WebsiteDetail', params: { id: slotProps.data.id } }">
@@ -9,10 +9,16 @@
           </router-link>
         </template> -->
       </Column>
-      <Column field="visits" header="访问量"></Column>
+      <Column field="googlebot_count" header="GoogleBot" sortable></Column>
+      <Column field="google_referer" header="Google来源" sortable></Column>
+      <Column field="visits" header="访问量" sortable></Column>
       <!-- <Column field="visitor_total" header="访客量"></Column> -->
-      <Column field="ips" header="IP数"></Column>
-      <Column field="data_transfers" header="总流量"></Column>
+      <Column field="ips" header="IP数" sortable></Column>
+      <Column field="data_transfers" header="总流量" sortable>
+        <template #body="slotProps">
+          {{ bytesToGB(slotProps.data.data_transfers) }} GB
+        </template>
+      </Column>
       <!-- <Column field="error_total" header="错误数"></Column> -->
       <!-- <Column field="malicious_request_total" header="恶意请求"></Column> -->
       <!-- <Column field="deploy_status" header="部署"></Column> -->
@@ -22,6 +28,7 @@
 </template>
 
 <script setup lang="ts">
+import { bytesToGB } from '@/utils/bytesToGB';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import { defineEmits, defineProps, ref, watch } from 'vue';
@@ -30,6 +37,7 @@ import { defineEmits, defineProps, ref, watch } from 'vue';
 const props = defineProps({
   customers: Array
 })
+
 
 // 使用 defineEmits 定义自定义事件
 const emit = defineEmits(['reach-last-page'])
@@ -46,7 +54,7 @@ const onPage = function (event) {
   const { first, rows } = event;
   const currentPage = first / rows + 1;
   const totalPages = Math.ceil(totalRecords.value / rows);
-  console.log(`Current page: ${currentPage}, Total pages: ${totalPages}`);
+  // console.log(`Current page: ${currentPage}, Total pages: ${totalPages}`);
 
   if (currentPage === totalPages) {
     // 触发自定义事件 reach-last-page
