@@ -11,18 +11,18 @@
     </div>
 
 
+
     <div class="upload-container">
-      上传nginx日志文件:
       <div class="card-upload">
         域名(选填)：
         <InputText type="text" v-model="domain" />
-        <Toast />
-        <FileUpload ref="fileUpload" name="upload_file" url="/api/upload" accept=".log,application/gzip,.gz"
-          :maxFileSize="1000000000" customUpload :auto="false" :multiple="true" />
+        <Toast ref="toast" />
+        <FileUpload mode="basic" ref="fileUpload" url="" name="upload_file" accept=".log,application/gzip,.gz"
+          :maxFileSize="1000000000" :multiple="true" @upload="submit_up" />
         <Button label="上传" @click="submit_up" />
       </div>
-
     </div>
+
 
     <CardData :websiteData="websiteData" />
     <p>7天内统计</p>
@@ -80,10 +80,14 @@ const checkTaskStatus = async (taskId) => {
 
 
 const submit_up = async () => {
+
   if (fileUpload.value?.files?.length > 0) {
-    const file = fileUpload.value.files[0];
+    console.log('11111', fileUpload.value.files)
+    const file = fileUpload.value.files;
     let formData = new FormData();
-    formData.append('upload_file', file, file.name);
+    for (let i = 0; i < file.length; i++) {
+      formData.append('upload_file', file[i]);
+    }
     formData.append('website', domain.value);
     formData.append('nginx_log_format', logFormat.value);
 
@@ -92,10 +96,10 @@ const submit_up = async () => {
       const response = await axiosInstance.post('api/upload/', formData);
 
       // 保存任务ID
-      const taskId = response.data.task_id;
+      // const taskId = response.data.task_id;
 
       // 使用taskId进行轮询
-      pollingInterval = setInterval(() => checkTaskStatus(taskId), 5000);
+      // pollingInterval = setInterval(() => checkTaskStatus(taskId), 5000);
 
       // 保存域名到历史记录
       if (logFormat.value) {

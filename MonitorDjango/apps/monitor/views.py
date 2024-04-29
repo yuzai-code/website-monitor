@@ -75,8 +75,9 @@ class LogUpload(APIView):
         try:
             file_lst = self.request.FILES.getlist('upload_file')
             # file = self.request.FILES['upload_file']
+            print(file_lst)
             for file in file_lst:
-
+                print(file.name)
                 domain = self.request.POST.get('website', None)
 
                 with transaction.atomic():
