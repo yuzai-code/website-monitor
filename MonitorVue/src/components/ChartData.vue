@@ -5,10 +5,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
-import Chart from 'primevue/chart'
-import { defineProps } from 'vue'
-import axiosInstance from '@/axiosConfig.ts'
+import axiosInstance from '@/axiosConfig.ts';
+import Chart from 'primevue/chart';
+import { defineProps, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
   websiteId: Number
@@ -20,14 +19,7 @@ const chartOptions = ref(null)
 const dataset = chartData.value?.datasets[0]
 
 const transformDataToChartData = (apiData) => {
-  // // 提取日期作为图表的 X 轴标签
-  // const labels = apiData[0].visit_count.map((entry) => entry.visit_time)
 
-  // // 提取 visit_count 作为第一个数据集
-  // const visitCountData = apiData[0].visit_count.map((entry) => entry.visit_count)
-
-  // // 提取 data_transfer 作为第二个数据集
-  // const dataTransferData = apiData[0].data_transfer.map((entry) => entry.data_transfer)
   console.log('apiData:', apiData.labels)
   // 返回图表数据
   return {

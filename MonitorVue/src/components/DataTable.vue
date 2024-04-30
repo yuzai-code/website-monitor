@@ -3,11 +3,11 @@
     <DataTable :value="customers" paginator :rows="100" :rowsPerPageOptions="[50, 100, 150]"
       tableStyle="min-width: 50rem" @page="onPage">
       <Column field="domain" header="网站">
-        <!-- <template #body="slotProps">
-          <router-link :to="{ name: 'WebsiteDetail', params: { id: slotProps.data.id } }">
+        <template #body="slotProps">
+          <router-link :to="{ name: 'WebsiteData', params: { domain: slotProps.data.domain } }">
             {{ slotProps.data.domain }}
           </router-link>
-        </template> -->
+        </template>
       </Column>
       <Column field="google_bot" header="GoogleBot" sortable></Column>
       <Column field="google_referer" header="Google来源" sortable></Column>

@@ -10,7 +10,7 @@ class TotalDaySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TotalDayModel
-        fields = ['domain', 'user', 'google_referer', 'ips', 'google_bot', 'visits', 'data_transfers', 'visit_date']
+        fields = ['domain', 'google_referer', 'ips', 'google_bot', 'visits', 'data_transfers', 'visit_date']
 
 
 class TotalSerializer(serializers.ModelSerializer):

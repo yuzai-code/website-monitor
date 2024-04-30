@@ -42,6 +42,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/website_data/:domain',
+      name: 'WebsiteData',
+      component: () => import('../views/WebsiteDataView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/login',
       name: 'Login',
       component: () => import('../views/LoginView.vue')

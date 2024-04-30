@@ -146,13 +146,24 @@ class WebsiteListAPIView(APIView):
         # after_key = request.query_params.get('after_key[domain]', None)
         date_str = request.query_params.get('date')
         domain = request.query_params.get('search_text')
-        # 格式化日期,只要日期部分
-        date_format = datetime.fromisoformat(date_str.rstrip('Z'))
-        date_only_str = date_format.date().isoformat()
+        domain_list = request.query_params.get('domain_list')
+        if domain_list:
+            # 将所有的域名返回
+            domain_list = TotalDayModel.objects.filter(user=request.user).values('domain').distinct()
+            return Response(domain_list, status=status.HTTP_200_OK)
+
+        if date_str:
+            # 格式化日期,只要日期部分
+            date_format = datetime.fromisoformat(date_str.rstrip('Z'))
+            date_only_str = date_format.date().isoformat()
+
+        else:
+            date_only_str = datetime.now().date().isoformat()
 
         if domain:
+            print('domain', domain)
             total_day_query = TotalDayModel.objects.filter(domain=domain, user=request.user,
-                                                              visit_date=date_only_str)
+                                                           visit_date=date_only_str)
         else:
             # 从数据库中获取数据
             total_day_query = TotalDayModel.objects.filter(user=request.user, visit_date=date_only_str)
@@ -211,12 +222,22 @@ class WebsiteDetailAPIView(RetrieveAPIView):
         user_id = request.user.id
         ip = request.query_params.get('ip')
         date_str = request.query_params.get('date')
+        domain = request.query_params.get('domain')
 
         # 调用es
         website_es = WebsiteES(index='visit_new', user_id=user_id)
         if ip:  # 根据ip查询
             # print('ip', ip)
             website_detail, new_last_sort_value = website_es.get_website_detail(ip=ip, date=date_str)
+        elif domain:
+            # 如果有domain参数，就根据domain查询，查找最近一个月的数据
+            date_month_ago = datetime.now() - timedelta(days=30)
+            total_day_query = TotalDayModel.objects.filter(domain=domain, user=request.user,
+                                                           visit_date__gte=date_month_ago).order_by('visit_date')
+            # 调用序列化器
+            total_day_serializer = TotalDaySerializer(total_day_query, many=True)
+            print(total_day_serializer.data)
+            return Response(total_day_serializer.data, status=status.HTTP_200_OK)
         data = {
             'website_detail': website_detail,
             'new_last_sort_value': new_last_sort_value,
