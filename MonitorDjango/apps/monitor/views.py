@@ -161,7 +161,6 @@ class WebsiteListAPIView(APIView):
             date_only_str = datetime.now().date().isoformat()
 
         if domain:
-            print('domain', domain)
             total_day_query = TotalDayModel.objects.filter(domain=domain, user=request.user,
                                                            visit_date=date_only_str)
         else:
@@ -236,7 +235,6 @@ class WebsiteDetailAPIView(RetrieveAPIView):
                                                            visit_date__gte=date_month_ago).order_by('visit_date')
             # 调用序列化器
             total_day_serializer = TotalDaySerializer(total_day_query, many=True)
-            print(total_day_serializer.data)
             return Response(total_day_serializer.data, status=status.HTTP_200_OK)
         data = {
             'website_detail': website_detail,

@@ -2,16 +2,23 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     },
     "esModuleInterop": true,
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Node",
-    "types": ["vite/client"],
+    "types": [
+      "vite/client"
+    ],
     /* 基本选项 */
-
-    "lib": ["dom", "dom.iterable", "esnext"], // 编译时需要包含的库文件的列表
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ], // 编译时需要包含的库文件的列表
     "allowJs": true, // 允许编译器编译JavaScript文件
     "checkJs": false, // 对.js文件执行类型检查
     "jsx": "preserve", // 在.tsx文件中支持JSX
@@ -41,5 +48,8 @@
     "src/**/*.vue",
     "vite-env.d.ts" // 确保你的声明文件被包含在内
   ],
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts"
+  ]
 }

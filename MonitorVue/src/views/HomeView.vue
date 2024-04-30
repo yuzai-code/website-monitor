@@ -10,13 +10,11 @@
       <Button label="查询" @click="submit" />
     </div>
 
-
-
     <div class="upload-container">
       <div class="card-upload">
         域名(选填)：
         <InputText type="text" v-model="domain" />
-        <Toast ref="toast" />
+        <Toast />
         <FileUpload mode="basic" ref="fileUpload" name="upload_file" accept=".log,application/gzip,.gz"
           :maxFileSize="1000000000" :multiple="true" @upload="submit_up" />
         <Button label="上传" @click="submit_up" />
