@@ -1,5 +1,5 @@
 <template>
-    <Dialog v-model:visible="visible" modal header="编辑个人资料" :style="{ width: '25rem' }">
+    <Dialog v-model:visible="visible" modal header="编辑个人资料" :style="{ width: '30rem' }">
         <span class="p-text-secondary block mb-5">更新你的个人信息.</span>
         <div class="flex align-items-center gap-3 mb-3">
             <label for="user" class="font-semibold w-6rem">用户名</label>
@@ -20,6 +20,7 @@
 import axiosInstance from '@/axiosConfig';
 import { useUserStore } from '@/store/userStore'; // 引入用户信息store
 import { storeToRefs } from 'pinia';
+import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';

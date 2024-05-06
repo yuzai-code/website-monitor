@@ -7,7 +7,7 @@ import type {
 import axios from 'axios'
 
 const axiosInstance: AxiosInstance = axios.create({
-  baseURL: 'http://192.168.0.163:8000/',
+  baseURL: 'http://192.168.0.163:8001/',
   timeout: 5001
 })
 

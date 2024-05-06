@@ -32,3 +32,5 @@ coverage
 *.pyc
 **/__pycache__
 MonitorDjango/apps/monitor/__pycache__
+src/presets/wind
+src/presets

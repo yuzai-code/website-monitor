@@ -14,39 +14,41 @@ import Ripple from 'primevue/ripple'
 // import './style.css'
 // import './flags.css'
 
-import Accordion from 'primevue/accordion'
+// import Accordion from 'primevue/accordion'
 import AccordionTab from 'primevue/accordiontab'
 import AutoComplete from 'primevue/autocomplete'
 import Avatar from 'primevue/avatar'
 import AvatarGroup from 'primevue/avatargroup'
-import Button from 'primevue/button'
-import Calendar from 'primevue/calendar'
-import Card from 'primevue/card'
-import Column from 'primevue/column'
+// import Button from 'primevue/button'
+// import Calendar from 'primevue/calendar'
+// import Card from 'primevue/card'
+// import Column from 'primevue/column'
 import ColumnGroup from 'primevue/columngroup' // optional
 import ConfirmationService from 'primevue/confirmationservice'
 import DataTable from 'primevue/datatable'
 import DialogService from 'primevue/dialogservice'
 import FileUpload from 'primevue/fileupload'
 import InputText from 'primevue/inputtext'
-import Row from 'primevue/row' // optional
+// import Row from 'primevue/row' // optional
 import Toast from 'primevue/toast'
 import ToastService from 'primevue/toastservice'
 // main.js 或 main.ts
 import axios from 'axios'
+import PiniaPersist from 'pinia-plugin-persist'
 import { useUserStore } from './store/userStore'
 
 const pinia = createPinia()
 const app = createApp(App)
 
-app.use(PrimeVue, { ripple: true })
+pinia.use(PiniaPersist)
+app.use(PrimeVue)
 app.use(ConfirmationService)
 app.use(ToastService)
 app.use(DialogService)
 app.use(router)
 // app.use(createPinia())
 app.use(pinia)
-app.config.globalProperties.$bytesToGB = function (bytes) {
+app.config.globalProperties.$bytesToGB = function (bytes: number) {
   return bytes / 1024 ** 3
 }
 const userStore = useUserStore()
@@ -61,9 +63,9 @@ if (token) {
 // app.component('Button', Button)
 // eslint-disable-next-line vue/multi-word-component-names
 app.component('Toast', Toast)
-app.component('Accordion', Accordion)
+// app.component('Accordion', Accordion)
 app.component('ColumnGroup', ColumnGroup)
-app.component('Row', Row)
+// app.component('Row', Row)
 app.component('AccordionTab', AccordionTab)
 app.component('AutoComplete', AutoComplete)
 // eslint-disable-next-line vue/multi-word-component-names
@@ -71,10 +73,10 @@ app.component('Avatar', Avatar)
 app.component('AvatarGroup', AvatarGroup)
 
 // eslint-disable-next-line vue/multi-word-component-names
-app.component('Button', Button)
-app.component('Calendar', Calendar)
-app.component('Card', Card)
-app.component('Column', Column)
+// app.component('Button', Button)
+// app.component('Calendar', Calendar)
+// app.component('Card', Card)
+// app.component('Column', Column)
 app.component('DataTable', DataTable)
 app.component('FileUpload', FileUpload)
 app.component('InputText', InputText)

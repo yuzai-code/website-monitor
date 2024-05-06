@@ -1,9 +1,10 @@
 <template>
-    <button @click="logout">退出登录</button>
+    <Button @click="logout">退出登录</Button>
 </template>
 
 <script setup lang="ts">
 import { useUserStore } from '@/store/userStore'; // 引入用户信息store
+import Button from 'primevue/button';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();

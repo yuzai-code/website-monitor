@@ -109,6 +109,9 @@
 import axiosInstance from '@/axiosConfig';
 import { FilterMatchMode, FilterOperator } from 'primevue/api';
 import Card from 'primevue/card'; // optional
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
+
 import Dropdown from 'primevue/dropdown'; // optional
 import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';

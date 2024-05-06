@@ -5,7 +5,7 @@
             <AutoComplete class="mx-2" v-model="value" dropdown :suggestions="items" @complete="fetchDomains" />
             <Button label="查询" @click="search" icon="pi pi-search" :loading="loading" />
         </div>
-        <div>
+        <div class="flex">
             <p class="text-blue-600">{{ domain }} 最近一个月相关数据的汇总</p>
         </div>
         <div class="card">
@@ -181,9 +181,9 @@ const search = async () => {
 
 </script>
 <style scoped>
-/* .card {
+.card {
     background-color: var(--surface-color);
     border-radius: 0.5rem;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-} */
+}
 </style>

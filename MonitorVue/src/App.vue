@@ -2,7 +2,7 @@
   <div class="flex-container">
     <Toast />
     <div class="sidebar" v-if="visible">
-      <div class="flex flex-column h-full">
+      <div class="flex flex-column h-full ">
 
         <div class="flex align-items-center justify-content-between px-4 pt-3 flex-shrink-0">
 
@@ -16,7 +16,7 @@
           </div>
         </div>
         <div class="overflow-y-auto">
-          <ul class="list-none p-0 m-0 overflow-hidden">
+          <ul class="list-none p-3 m-1 overflow-hidden">
             <li>
               <router-link to="/"
                 class="flex align-items-center cursor-pointer p-3 border-round text-700 hover:surface-100 transition-duration-150 transition-colors p-ripple">
@@ -81,9 +81,6 @@
               </a>
             </li>
             <li>
-              <LogoutButton />
-            </li>
-            <li>
               <router-link :to="{ name: 'Login' }"
                 class="flex align-items-center cursor-pointer p-3 border-round text-700 hover:surface-100 transition-duration-150 transition-colors p-ripple">
                 <i class="pi pi-cog mr-2"></i>
@@ -96,6 +93,9 @@
                 <i class="pi pi-cog mr-2"></i>
                 <span class="font-medium">注册</span>
               </router-link>
+            </li>
+            <li>
+              <LogoutButton />
             </li>
           </ul>
         </div>
@@ -116,6 +116,7 @@
 import LogoutButton from '@/components/LogoutButton.vue';
 import UserProfile from '@/components/UserProfile.vue';
 import { storeToRefs } from 'pinia';
+import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
 import { useUserStore } from './store/userStore';
@@ -173,9 +174,11 @@ const getAvatarLabel = (username) => {
 .sidebar {
   width: 250px;
   /* Set the width of the sidebar */
-  background: #f7f4f4;
-  /* Example background color for the sidebar */
+  background: #ffffff;
+
+
 }
+
 
 .main-content {
   flex-grow: 1;

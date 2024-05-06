@@ -5,7 +5,7 @@
         <template #title>IP统计</template>
         <template #content>
           日期:
-          <Calendar id="calendar-24h" v-model="date" showTime hourFormat="24" />
+          <Calendar id="calendar-24h" v-model="date" @update:modelValue="updateSelectedDate" showTime hourFormat="24" />
           <Button type="button" label="查询" icon="pi pi-search" :loading="loading" @click="fetchData" />
 
         </template>
@@ -15,7 +15,7 @@
     <div class="card flex">
       <p class="m-0">
         <Card>
-          <template #title>历史总IP数前15</template>
+          <template #title>历史总IP数前100</template>
           <template #content>
             <p class="m-0">
               <DataTable :value="ips_data.ips_all">
@@ -36,7 +36,7 @@
 
 
       <Card>
-        <template #title>1天内IP数前15</template>
+        <template #title>1天内IP数前100</template>
         <template #content>
           <p class="m-0">
             <DataTable :value="ips_data.ips_day">
@@ -55,7 +55,7 @@
       </Card>
 
       <Card>
-        <template #title>近1小时内IP数量前15</template>
+        <template #title>近1小时内IP数量前100</template>
         <template #content>
           <p class="m-0">
             <DataTable :value="ips_data.ips_hour">
@@ -73,7 +73,7 @@
       </Card>
 
       <Card>
-        <template #title>近5分钟内IP数前15</template>
+        <template #title>近5分钟内IP数前100</template>
         <template #content>
           <p class="m-0">
             <DataTable :value="ips_data.ips_min">
@@ -96,10 +96,13 @@
 
 <script setup lang="ts">
 import axiosInstance from '@/axiosConfig';
+import { useFilterStore } from '@/store/filterStore';
 import Button from 'primevue/button';
 import Calendar from 'primevue/calendar';
 import Card from 'primevue/card';
-import { computed, onMounted, ref, } from 'vue';
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
+import { onMounted, ref } from 'vue';
 
 
 const ips_data = ref({
@@ -108,34 +111,18 @@ const ips_data = ref({
   ips_hour: [],
   ips_day: [],
 });
-const selectedWebSite = ref(null);
-const websiteId = ref(null);
-const defaultWebsiteId = 1905;
-const defaultWebsite = { id: defaultWebsiteId, domain: 'us.rajabandot.top' }
+
 const date = ref(new Date());
 const loading = ref(false);
+const filterStore = useFilterStore(); // 使用筛选条件store
 
-const setDefaultWebsiteId = () => {
-  selectedWebSite.value = defaultWebsite // 设置默认网站对象，包含 id 和 domain
+const updateSelectedDate = (newDate) => {
+  filterStore.setDate(newDate);
 }
 
-
-// 计算属性来格式化日期
-const formattedDate = computed(() => {
-  // 将日期时间都转换为字符串
-  return date.value.toISOString().slice(0, 16).replace('T', ' ');
-});
-
 const fetchData = async () => {
-  if (!selectedWebSite.value) {
-    console.error('Please select a website and dates');
-    return;
-  }
-  websiteId.value = selectedWebSite.value.id;
-
   // 创建日期的UTC格式
-  const utcDate = new Date(date.value.getTime() - (date.value.getTimezoneOffset() * 60000)).toISOString();
-
+  const utcDate = new Date(filterStore.selectedDate.getTime() - (filterStore.selectedDate.getTimezoneOffset() * 60000)).toISOString();
   // 开始加载
   loading.value = true;
   try {
@@ -146,7 +133,6 @@ const fetchData = async () => {
     });
 
     ips_data.value = response.data;
-
   } catch (error) {
     console.error('Request failed:', error);
   } finally {
@@ -154,9 +140,9 @@ const fetchData = async () => {
   }
 };
 
-
 onMounted(() => {
-  setDefaultWebsiteId();
+  // 从store中获取日期
+  date.value = filterStore.selectedDate;
   fetchData();
 });
 </script>

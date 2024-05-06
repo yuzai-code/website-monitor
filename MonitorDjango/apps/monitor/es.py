@@ -18,19 +18,20 @@ class ElasticsearchQueryHelper:
         :param search:
         :return:
         """
-        search = search.query('bool', must_not=[Q("wildcard", user_agent="*googlebot*"),
-                                                Q("wildcard", user_agent="*bingbot*"),
-                                                Q("wildcard", user_agent="*neobot*"),
-                                                Q("wildcard", path="*woff*"),
-                                                Q("wildcard", path="*.js"),
-                                                Q("wildcard", path="*.jpg"),
-                                                Q("wildcard", path="*.png"),
-                                                Q("wildcard", path="*.css"),
-                                                Q("wildcard", path="*.json"),
-                                                Q("wildcard", path="*.ico"),
-                                                Q("wildcard", path="*.svg"),
-                                                Q("wildcard", path="*.js.php"),
-                                                ])
+        search = search.query('bool', must_not=[
+            # Q("wildcard", user_agent="*googlebot*"),
+            Q("wildcard", user_agent="*bingbot*"),
+            Q("wildcard", user_agent="*neobot*"),
+            Q("wildcard", path="*woff*"),
+            Q("wildcard", path="*.js"),
+            Q("wildcard", path="*.jpg"),
+            Q("wildcard", path="*.png"),
+            Q("wildcard", path="*.css"),
+            Q("wildcard", path="*.json"),
+            Q("wildcard", path="*.ico"),
+            Q("wildcard", path="*.svg"),
+            Q("wildcard", path="*.js.php"),
+        ])
         return search
 
     def filter_by_user_id(self, search):
@@ -251,7 +252,7 @@ class IpAggregation(ElasticsearchQueryHelper):
 
         return search_query
 
-    def get_ip_aggregation(self, size=15):
+    def get_ip_aggregation(self, size=100):
         """
         获取IP访问次数最多的前N个
         """
@@ -259,7 +260,7 @@ class IpAggregation(ElasticsearchQueryHelper):
         search_query.aggs.bucket('ip', 'terms', field='remote_addr', size=size)
         return self.execute_search(search_query)
 
-    def get_ip_aggregation_by_date(self, date, size=15):
+    def get_ip_aggregation_by_date(self, date, size=100):
         """
         获取指定日期内IP数量最多的前N个
         """
@@ -273,7 +274,7 @@ class IpAggregation(ElasticsearchQueryHelper):
         search_query.aggs.bucket('ip', 'terms', field='remote_addr', size=size)
         return self.execute_search(search_query)
 
-    def get_ip_aggregation_time_window(self, from_time, time_unit, duration, size=10):
+    def get_ip_aggregation_time_window(self, from_time, time_unit, duration, size=100):
         """
         获取从指定时间开始，指定时间单位和持续时长内IP数量最多的前N个
         """
@@ -381,7 +382,6 @@ class WebsiteES(ElasticsearchQueryHelper):
 
         if date:
             date = date.split(' ')[0]
-            print(date)
             search = search.filter('range', visit_time={'gte': f'{date}T00:00:00', 'lte': f'{date}T23:59:59'})
         # 确保查询结果按照某个字段排序，这里假设是 'timestamp'
         search = search.sort({'visit_time': {'order': 'desc'}})

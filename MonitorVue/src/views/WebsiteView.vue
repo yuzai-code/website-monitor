@@ -18,6 +18,7 @@
 <script setup lang="ts">
 import axiosInstance from '@/axiosConfig';
 import DataTable from '@/components/DataTable.vue';
+import Button from 'primevue/button';
 import { computed, onMounted, ref } from 'vue';
 
 const customers = ref([])

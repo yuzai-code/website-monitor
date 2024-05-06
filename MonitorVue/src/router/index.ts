@@ -24,6 +24,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/googlebot/:domain',
+      name: 'GoogleBot',
+      component: () => import('../views/GoogleBotView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/ip_list',
       name: 'IpList',
       component: () => import('../views/IpListView.vue'),

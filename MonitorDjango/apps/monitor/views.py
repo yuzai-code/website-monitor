@@ -243,6 +243,28 @@ class WebsiteDetailAPIView(RetrieveAPIView):
         return Response(data=data, status=status.HTTP_200_OK)
 
 
+class WebsiteDetailGoogleBotAPIView(APIView):
+    """
+    GoogleBot的详细信息
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, domain, *args, **kwargs):
+        if not domain:
+            return Response({'error': 'Domain not found'}, status=status.HTTP_404_NOT_FOUND)
+        # 根据domain查询最近一个月的GoogleBot数据
+        date_month_ago = datetime.now() - timedelta(days=30)
+        total_day_query = TotalDayModel.objects.filter(domain=domain, user=request.user,
+                                                       visit_date__gte=date_month_ago).order_by('visit_date')
+        if not total_day_query:
+            return Response({'error': 'GoogleBot not found'}, status=status.HTTP_404_NOT_FOUND)
+        # 调用序列化器
+        total_day_serializer = TotalDaySerializer(total_day_query, many=True)
+
+        # 调用es
+        return Response(total_day_serializer.data, status=status.HTTP_200_OK)
+
+
 class ChartDataAPIView(APIView):
     """
     获取图表数据

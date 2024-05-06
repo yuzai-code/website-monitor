@@ -9,7 +9,17 @@
           </router-link>
         </template>
       </Column>
-      <Column field="google_bot" header="GoogleBot" sortable></Column>
+      <Column field="google_bot" header="GoogleBot" sortable>
+        <template #body="slotProps">
+          <router-link :to="{
+            name: 'GoogleBot', params: {
+              domain: slotProps.data.domain,
+            }
+          }">
+            {{ slotProps.data.google_bot }}
+          </router-link>
+        </template>
+      </Column>
       <Column field="google_referer" header="Google来源" sortable></Column>
       <Column field="visits" header="访问量" sortable></Column>
       <!-- <Column field="visitor_total" header="访客量"></Column> -->
