@@ -1,4 +1,4 @@
-// store
+// store/filterStore.ts
 import { defineStore } from 'pinia'
 
 export const useFilterStore = defineStore('filter', {
@@ -13,14 +13,14 @@ export const useFilterStore = defineStore('filter', {
     setIpsData(data: any) {
       this.ipsData = data
     }
-  },
-  persist: {
-    enabled: true,
-    strategies: [
-      {
-        key: 'filter',
-        storage: localStorage
-      }
-    ]
   }
+  //   persist: {
+  //     enabled: true, // 启用持久化
+  //     strategies: [
+  //       {
+  //         key: 'filter',
+  //         storage: localStorage
+  //       }
+  //     ]
+  //   }
 })

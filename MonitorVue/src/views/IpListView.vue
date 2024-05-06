@@ -150,7 +150,6 @@ onMounted(() => {
     filterStore.setDate(new Date(filterStore.selectedDate));
   } 
   date.value = filterStore.selectedDate;
-  // console.log('类型', typeof date.value);
   // 从store中获取ips_data，如果存在则直接赋值
   if (filterStore.ipsData) {
     ips_data.value = filterStore.ipsData;
