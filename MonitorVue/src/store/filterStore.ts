@@ -1,17 +1,17 @@
+// store
 import { defineStore } from 'pinia'
 
 export const useFilterStore = defineStore('filter', {
   state: () => ({
-    selectedDate: new Date()
+    selectedDate: new Date(),
+    ipsData: { ips_all: [], ips_min: [], ips_hour: [], ips_day: [] }
   }),
   actions: {
     setDate(date: Date) {
       this.selectedDate = date
-    }
-  },
-  getters: {
-    formattedDate: (state) => {
-      return state.selectedDate.toISOString().slice(0, 10) // 只保留日期部分
+    },
+    setIpsData(data: any) {
+      this.ipsData = data
     }
   },
   persist: {

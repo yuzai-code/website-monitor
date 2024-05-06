@@ -5,7 +5,7 @@
         <template #title>IP统计</template>
         <template #content>
           日期:
-          <Calendar id="calendar-24h" v-model="date" @update:modelValue="updateSelectedDate" showTime hourFormat="24" />
+          <Calendar id="calendar-24h" v-model="date" @update:modelValue="updateSelectedDate" dateFormat="yy-mm-dd" showTime hourFormat="24" />
           <Button type="button" label="查询" icon="pi pi-search" :loading="loading" @click="fetchData" />
 
         </template>
@@ -117,6 +117,7 @@ const loading = ref(false);
 const filterStore = useFilterStore(); // 使用筛选条件store
 
 const updateSelectedDate = (newDate) => {
+  // console.log('类型1', typeof newDate);
   filterStore.setDate(newDate);
 }
 
@@ -133,6 +134,9 @@ const fetchData = async () => {
     });
 
     ips_data.value = response.data;
+    // console.log('Response:', response.data);
+    // 将ips_data存储到store中
+    filterStore.setIpsData(response.data);
   } catch (error) {
     console.error('Request failed:', error);
   } finally {
@@ -141,9 +145,18 @@ const fetchData = async () => {
 };
 
 onMounted(() => {
-  // 从store中获取日期
+  // 从store中获取日期，判断如果类型是string转换为Date类型
+  if (typeof filterStore.selectedDate === 'string') {
+    filterStore.setDate(new Date(filterStore.selectedDate));
+  } 
   date.value = filterStore.selectedDate;
-  fetchData();
+  // console.log('类型', typeof date.value);
+  // 从store中获取ips_data，如果存在则直接赋值
+  if (filterStore.ipsData) {
+    ips_data.value = filterStore.ipsData;
+  } else {
+    fetchData();
+  }
 });
 </script>
 
