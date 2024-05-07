@@ -30,7 +30,7 @@ from WebsiteMonitor.settings import config
 elasticsearch_client = connections.create_connection(hosts=[config['es']['ES_URL']], timeout=20)
 
 
-# @shared_task(name='total_day', queue='handle_file')
+@shared_task(name='total_day', queue='handle_file')
 def total_day(user_id, date=None):
     """
 每日统计
