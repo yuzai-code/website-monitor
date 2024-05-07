@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, date
-
+import geoip2.database
 from django.db import transaction
 from django.db.models import Count, Q, Avg, Sum, F
 from django.db.models.functions import TruncDay
@@ -321,12 +321,24 @@ class IpListAPIView(APIView):
         ips_data = [{'ip': bucket.key, 'count': bucket.doc_count} for bucket in ip_aggregation]
         return ips_data
 
+    def lookup_ip(self, ip_address, db_path='/home/yuzai/Project/website-monitor-dev/MonitorDjango/utils/GeoLite2-Country.mmdb'):
+        """
+        查询IP地址
+        """
+        # 打开GeoLite2-Country.mmdb数据库文件
+        with geoip2.database.Reader(db_path) as reader:
+            try:
+                response = reader.country(ip_address)
+                country = response.country.name
+                return country
+            except geoip2.errors.AddressNotFoundError:
+                return '未知'
+
     def get(self, request, *args, **kwargs):
         domain = request.GET.get('domain', '')
         user_id = request.user.id
         # print(user_id)
         date_str = request.query_params.get('date', '')
-        print(date_str)
         day = date_str.split('T')[0]
         if domain:
             # 调用es查询域名下的ip
@@ -346,6 +358,10 @@ class IpListAPIView(APIView):
         # 所有
         ips_aggregation = ip_aggre.get_ip_aggregation()
         ips_all = self.to_serializer(ips_aggregation)
+        # 查询ip国家
+        for ip_data in ips_all:
+            ip_data['country'] = self.lookup_ip(ip_data['ip'])
+        print(ips_all)
         # 今天
         aggregation_day = ip_aggre.get_ip_aggregation_by_date(date=day)
         ips_day = self.to_serializer(aggregation_day)
