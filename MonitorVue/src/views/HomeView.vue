@@ -16,12 +16,11 @@
         <InputText type="text" v-model="domain" />
         <Toast />
         <FileUpload ref="fileUpload" name="upload_file" accept=".log,application/gzip,.gz" :maxFileSize="1000000000"
-          :multiple="true" @upload="submit_up">
+          :multiple="true" customUpload @uploader="submit_up">
           <template #empty>
             <p class="drop-message">拖放文件到这里或点击上传</p>
           </template>
         </FileUpload>
-        <Button label="上传" @click="submit_up" />
       </div>
     </div>
 
