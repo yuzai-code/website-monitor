@@ -315,69 +315,51 @@ class ChartDataAPIView(APIView):
 
 
 class IpListAPIView(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.db_path = '/home/yuzai/Project/website-monitor-dev/MonitorDjango/utils/GeoLite2-Country.mmdb'
 
     def to_serializer(self, ip_aggregation):
-        ips_data = [{'ip': bucket.key, 'count': bucket.doc_count} for bucket in ip_aggregation]
-        return ips_data
+        return [{'ip': bucket.key, 'count': bucket.doc_count} for bucket in ip_aggregation]
 
-    def lookup_ip(self, ip_address, db_path='/home/yuzai/Project/website-monitor-dev/MonitorDjango/utils/GeoLite2-Country.mmdb'):
+    def lookup_ip(self, ip_address):
         """
         查询IP地址
         """
-        # 打开GeoLite2-Country.mmdb数据库文件
-        with geoip2.database.Reader(db_path) as reader:
-            try:
-                response = reader.country(ip_address)
-                country = response.country.name
-                return country
-            except geoip2.errors.AddressNotFoundError:
-                return '未知'
+        if not hasattr(self, 'ip_cache'):
+            self.ip_cache = {}
+        if ip_address not in self.ip_cache:
+            with geoip2.database.Reader(self.db_path) as reader:
+                try:
+                    response = reader.country(ip_address)
+                    country = response.country.name
+                    self.ip_cache[ip_address] = country
+                except geoip2.errors.AddressNotFoundError:
+                    self.ip_cache[ip_address] = '未知'
+        return self.ip_cache[ip_address]
+
+    def get_ip_data(self, aggregation, date_str=None, time_window=None):
+        ips_aggregation = self.to_serializer(aggregation)
+        for ip_data in ips_aggregation:
+            ip_data['country'] = self.lookup_ip(ip_data['ip'])
+        return ips_aggregation
 
     def get(self, request, *args, **kwargs):
         domain = request.GET.get('domain', '')
         user_id = request.user.id
-        # print(user_id)
         date_str = request.query_params.get('date', '')
         day = date_str.split('T')[0]
-        if domain:
-            # 调用es查询域名下的ip
-            ip_aggre = IpAggregation(index='visit_new', domain=domain, user_id=user_id)
-            # 所有
-            ips_aggregation = ip_aggre.get_ip_aggregation()
-            ips_all = self.to_serializer(ips_aggregation)
-            # 今天
-            aggregation_day = ip_aggre.get_ip_aggregation_by_date(date=day)
-            ips_day = self.to_serializer(aggregation_day)
-            data = {
-                'ips_all': ips_all,
-                'ips_day': ips_day,
-            }
-            return Response(data, status=status.HTTP_200_OK)
-        ip_aggre = IpAggregation(index='visit_new', user_id=user_id)
-        # 所有
-        ips_aggregation = ip_aggre.get_ip_aggregation()
-        ips_all = self.to_serializer(ips_aggregation)
-        # 查询ip国家
-        for ip_data in ips_all:
-            ip_data['country'] = self.lookup_ip(ip_data['ip'])
-        print(ips_all)
-        # 今天
-        aggregation_day = ip_aggre.get_ip_aggregation_by_date(date=day)
-        ips_day = self.to_serializer(aggregation_day)
-        # 1小时内
-        aggregation_hour = ip_aggre.get_ip_aggregation_time_window(date_str, 'hour', 1)
-        ips_hour = self.to_serializer(aggregation_hour)
-        # 5分钟内
-        aggregation_min = ip_aggre.get_ip_aggregation_time_window(date_str, 'minute', 5)
-        ips_min = self.to_serializer(aggregation_min)
+
+        ip_aggre = IpAggregation(index='visit_new', domain=domain, user_id=user_id) if domain else IpAggregation(index='visit_new', user_id=user_id)
+
         data = {
-            'ips_all': ips_all,
-            'ips_day': ips_day,
-            'ips_hour': ips_hour,
-            'ips_min': ips_min,
+            'ips_all': self.get_ip_data(ip_aggre.get_ip_aggregation()),
+            'ips_day': self.get_ip_data(ip_aggre.get_ip_aggregation_by_date(date=day)),
+            'ips_hour': self.get_ip_data(ip_aggre.get_ip_aggregation_time_window(date_str, 'hour', 1)),
+            'ips_min': self.get_ip_data(ip_aggre.get_ip_aggregation_time_window(date_str, 'minute', 5)),
         }
-        # print(data)
 
         return Response(data, status=status.HTTP_200_OK)
 
