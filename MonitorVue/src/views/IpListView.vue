@@ -139,7 +139,7 @@ const fetchData = async () => {
     });
 
     ips_data.value = response.data;
-    // console.log('Response:', response.data);
+    console.log('Response:', response.data);
     // 将ips_data存储到store中
     filterStore.setIpsData(response.data);
   } catch (error) {

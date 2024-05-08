@@ -223,9 +223,22 @@ class WebsiteDetailAPIView(RetrieveAPIView):
         date_str = request.query_params.get('date')
         domain = request.query_params.get('domain')
 
+        hit_list = []
+        # print(f'ip: {ip}, domain: {domain}, date: {date_str}')
         # 调用es
         website_es = WebsiteES(index='visit_new', user_id=user_id)
-        if ip:  # 根据ip查询
+        if ip and domain:
+            googlebot_ip_detail = website_es.get_googlebot_ip_detail(ip=ip, domain=domain, date=date_str)
+            # print(googlebot_ip_detail['hits']['hits'])
+            for hit in googlebot_ip_detail['hits']['hits']:
+                # print(hit['_source'])
+                hit_list.append(hit['_source'])
+            data = {
+                'website_detail': hit_list,
+            }
+            print(len(data['website_detail']))
+            return Response(data=data, status=status.HTTP_200_OK)
+        elif ip:  # 根据ip查询
             # print('ip', ip)
             website_detail, new_last_sort_value = website_es.get_website_detail(ip=ip, date=date_str)
         elif domain:
@@ -250,12 +263,21 @@ class WebsiteDetailGoogleBotAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, domain, *args, **kwargs):
+        googlebot = request.query_params.get('google_bot', '')
+        visit_date = request.query_params.get('visit_date', '')
         if not domain:
             return Response({'error': 'Domain not found'}, status=status.HTTP_404_NOT_FOUND)
+        if googlebot:
+            # 根据domain查询最近一个月的GoogleBot数据
+            ip_agg = IpAggregation(index='visit_new', domain=domain, user_id=request.user.id)
+            googlebot_ip_data = ip_agg.get_ip_googlebot(visit_date=visit_date)
+            data = [{'ip': bucket.key, 'count': bucket.doc_count} for bucket in googlebot_ip_data]
+            return Response(data, status=status.HTTP_200_OK)
+
         # 根据domain查询最近一个月的GoogleBot数据
         date_month_ago = datetime.now() - timedelta(days=30)
         total_day_query = TotalDayModel.objects.filter(domain=domain, user=request.user,
-                                                       visit_date__gte=date_month_ago).order_by('visit_date')
+                                                       visit_date__gte=date_month_ago).order_by('-visit_date')
         if not total_day_query:
             return Response({'error': 'GoogleBot not found'}, status=status.HTTP_404_NOT_FOUND)
         # 调用序列化器
@@ -352,7 +374,8 @@ class IpListAPIView(APIView):
         date_str = request.query_params.get('date', '')
         day = date_str.split('T')[0]
 
-        ip_aggre = IpAggregation(index='visit_new', domain=domain, user_id=user_id) if domain else IpAggregation(index='visit_new', user_id=user_id)
+        ip_aggre = IpAggregation(index='visit_new', domain=domain, user_id=user_id) if domain else IpAggregation(
+            index='visit_new', user_id=user_id)
 
         data = {
             'ips_all': self.get_ip_data(ip_aggre.get_ip_aggregation()),

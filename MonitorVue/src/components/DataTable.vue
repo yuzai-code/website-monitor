@@ -1,7 +1,8 @@
 <template>
   <div class="card">
     <DataTable :value="customers" paginator :rows="100" :rowsPerPageOptions="[50, 100, 150]"
-      tableStyle="min-width: 50rem" @page="onPage">
+    :sortField="sortingStore.sortField" :sortOrder="sortingStore.sortOrder"
+      tableStyle="min-width: 50rem" @sort="handleSort" @page="onPage">
       <Column field="domain" header="网站">
         <template #body="slotProps">
           <router-link :to="{ name: 'WebsiteData', params: { domain: slotProps.data.domain } }">
@@ -29,15 +30,12 @@
           {{ bytesToGB(slotProps.data.data_transfers) }} GB
         </template>
       </Column>
-      <!-- <Column field="error_total" header="错误数"></Column> -->
-      <!-- <Column field="malicious_request_total" header="恶意请求"></Column> -->
-      <!-- <Column field="deploy_status" header="部署"></Column> -->
-      <!-- <Column field="request_per_second" header="每秒请求"></Column> -->
     </DataTable>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useFilterStore } from '@/store/filterStore';
 import { bytesToGB } from '@/utils/bytesToGB';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -48,10 +46,14 @@ const props = defineProps({
   customers: Array
 })
 
+const sortingStore = useFilterStore(); // 使用筛选器 store
 
 // 使用 defineEmits 定义自定义事件
 const emit = defineEmits(['reach-last-page'])
 
+const handleSort = (event) => {
+  sortingStore.setSort(event.sortField, event.sortOrder);
+};
 // 定义计算属性，动态获取 customers 的长度
 const totalRecords = ref(props.customers.length);
 

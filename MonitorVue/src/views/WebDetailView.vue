@@ -118,7 +118,6 @@ import { useRoute } from 'vue-router';
 
 const route = useRoute()  // 获取路由参数
 const WebsiteDetail = ref([])
-const new_last_sort_value = ref(null)
 const totalRecords = ref(null) // 总页数
 const currentPage = ref(null)  // 当前页
 const filters = ref();
@@ -170,26 +169,6 @@ const columns = ref([
   { field: 'malicious_request', header: '是否恶意请求', filter: true },
   { field: 'method', header: 'method', filter: true }
 ]);
-// const filters = ref({
-//   'domain': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-//   'remote_addr': { value: route.params.ip, matchMode: FilterMatchMode.STARTS_WITH },
-//   'request_time': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-//   'http_referer': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-//   'user_agent': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-//   'path': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-//   'visit_time': { value: null, matchMode: FilterMatchMode.DATE_IS },
-//   'data_transfer': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-//   'status_code': { value: null, matchMode: FilterMatchMode.EQUALS },
-//   'malicious_request': { value: null, matchMode: FilterMatchMode.EQUALS },
-//   'method': { value: null, matchMode: FilterMatchMode.EQUALS },
-// });
-
-// const formatDateTime = (isoString) => {
-//   const date = new Date(isoString);
-//   // return date.toLocaleString(); // 将返回本地格式的日期和时间
-//   // 只返回日期
-//   return date.toLocaleDateString();
-// };
 
 const formatDateTime = (value) => {
   // Attempt to handle string or timestamp inputs by converting them to Date objects
@@ -222,7 +201,7 @@ const cleanmethods = (methodValue) => {
 };
 
 const fetchData = async () => {
-  const ip = route.params.ip
+ 
   // 获取存储的Token
   const token = localStorage.getItem('authToken');
   try {
@@ -232,15 +211,18 @@ const fetchData = async () => {
         'Authorization': `Token ${token}`
       },
       params: {
-        ip: ip,
-        new_last_sort_value: new_last_sort_value.value,
-        date: route.params.date
+        ip: route.params.ip,
+        date: route.params.date,
+        domain: route.params.domain,
       }
 
     })
-    console.log('Website detail:', response.data)
+
+    // console.log('Website detail1111111111:', response.data.website_detail)
+
     if (WebsiteDetail.value.length === 0) {
       WebsiteDetail.value = getDetail(response.data.website_detail)
+      // console.log('getwebsite_detail:', WebsiteDetail.value)
     } else if (response.data.website_detail.length > 0) {
       if (Array.isArray(WebsiteDetail.value) && Array.isArray(response.data.website_detail)) {
         WebsiteDetail.value = WebsiteDetail.value.concat(getDetail(response.data.website_detail))

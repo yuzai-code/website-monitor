@@ -246,11 +246,21 @@ class IpAggregation(ElasticsearchQueryHelper):
         if self.user_id:
             search_query = self.filter_by_user_id(search_query)
 
-        if additional_filters:
+        if additional_filters:  # 如果有额外的过滤条件，添加到搜索查询中
             for filt in additional_filters:
                 search_query = search_query.filter('range', **filt)
 
         return search_query
+
+    def get_ip_googlebot(self, visit_date, size=100):
+        """
+        获取Googlebot访问次数最多的前N个
+        """
+        search_query = self._base_search()
+        search_query = search_query.filter('term', visit_time=visit_date)
+        search_query = search_query.filter('wildcard', user_agent="*googlebot*")
+        search_query.aggs.bucket('ip', 'terms', field='remote_addr', size=size)
+        return self.execute_search(search_query)
 
     def get_ip_aggregation(self, size=100):
         """
@@ -403,3 +413,26 @@ class WebsiteES(ElasticsearchQueryHelper):
                 new_last_sort_value = hit['sort'][0]
 
         return data_list, new_last_sort_value
+
+    def get_googlebot_ip_detail(self, ip=None, date=None, domain=None, page_size=1000):
+        search = self.search
+        search = self.filter_by_user_id(search)
+
+        search = self.exclude_filter(search)
+        # 构建查询
+        query = Q('bool',
+                  must=[
+                      Q('term', remote_addr=ip),
+                      Q('term', visit_time=date),
+                      Q('term', domain__keyword=domain),
+                  ],
+                  should=[
+                      Q('wildcard', user_agent="*Googlebot*")
+                  ],
+                  minimum_should_match=1
+                  )
+
+        search = search.query(query).extra(size=page_size)
+        response = search.execute()
+
+        return response.to_dict()

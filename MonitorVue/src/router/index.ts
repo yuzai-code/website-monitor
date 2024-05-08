@@ -18,7 +18,7 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/website_detail/:ip?/:date?',
+      path: '/website_detail/:ip?/:date?/:domain?',
       name: 'WebsiteDetail',
       component: () => import('../views/WebDetailView.vue'),
       meta: { requiresAuth: true }

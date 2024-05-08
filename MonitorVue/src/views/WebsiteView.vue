@@ -18,6 +18,7 @@
 <script setup lang="ts">
 import axiosInstance from '@/axiosConfig';
 import DataTable from '@/components/DataTable.vue';
+import { useFilterStore } from '@/store/filterStore';
 import Button from 'primevue/button';
 import { computed, onMounted, ref } from 'vue';
 
@@ -27,7 +28,7 @@ const value = ref("");
 const items = ref([]);
 const date = ref(new Date()); // 日期, 默认为当前日期
 const loading = ref(false);
-
+const filterStore = useFilterStore(); // 使用筛选器 store
 
 
 const formatterDate = computed(() => {
@@ -39,10 +40,14 @@ const selectDate = (event) => {
   if (event.target.innerText === '前一天') {
     date.value = new Date(date.value.getTime() - 24 * 60 * 60 * 1000);
     // console.log('Previous day:', date.value);
+    // console.log(filterStore.setWebsiteDate)
+    // 调用store中的方法，更新日期
+    filterStore.setWebsiteDate(date.value);
     submit();
   } else {
     date.value = new Date();
     // console.log('Today:', date.value);
+    filterStore.setWebsiteDate(date.value);
     submit();
   }
 }
@@ -90,7 +95,9 @@ const submit = async () => {
     setTimeout(() => {
       loading.value = false;
     }, 2000);
-    console.log('Updated afterKey:', afterKey.value);
+    // console.log('Updated afterKey:', afterKey.value);
+    // 将后端获取的 afterKey 存储到 store 中
+    filterStore.setWebsiteList(response.data, afterKey.value);
   } catch (error) {
     // console.error('Request failed:', error);
   }
@@ -98,6 +105,14 @@ const submit = async () => {
 
 // 页面加载时，不带搜索词调用 submit 获取所有数据
 onMounted(() => {
+  // 从 store中获取数据，如果存在则直接赋值
+  if (filterStore.websiteList) {
+    customers.value = filterStore.websiteList;
+    afterKey.value = filterStore.afterKey;
+    date.value = filterStore.websiteDate;
+  } else {
+    submit();
+  }
   submit();
 });
 
