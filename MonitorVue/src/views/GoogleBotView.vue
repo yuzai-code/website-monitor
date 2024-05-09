@@ -25,7 +25,7 @@
 
                     <OverlayPanel ref="op">
                         <p>GoogleBot的IP地址和数量</p>
-                        <DataTable :value="googlebotIP">
+                        <DataTable :value="googlebotIP" scrollable scrollHeight="400px" tableStyle="min-width: 2rem">
                             <Column field="ip" header="IP地址">
                                 <template #body={data}>
                                     <router-link :to="{ name: 'WebsiteDetail', params: { ip: data.ip,
