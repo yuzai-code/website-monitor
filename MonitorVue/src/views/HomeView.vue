@@ -70,7 +70,7 @@ const checkTaskStatus = async (taskId) => {
         severity: response.data.status === 'SUCCESS' ? 'success' : 'error',
         summary: response.data.status === 'SUCCESS' ? '处理完成' : '处理失败',
         detail: response.data.status === 'SUCCESS' ? '文件已成功处理' : '文件处理失败，请重试',
-        life: 3000
+        life: 10000
       });
       clearInterval(pollingInterval); // 停止轮询
     }
@@ -115,14 +115,14 @@ const submit_up = async () => {
       console.log(response)
       // 200为成功400为缺少nginx日志配置
       if (response.status === 202) {
-        toast.add({ severity: 'success', summary: '上传成功', detail: response.data.message, life: 3000 });
+        toast.add({ severity: 'success', summary: '上传成功', detail: response.data.message, life:10000 });
       }
     } catch (error) {
 
       if (error.response.status === 401) {
-        toast.add({ severity: 'error', summary: '上传失败', detail: '缺少nginx日志配置', life: 3000 });
+        toast.add({ severity: 'error', summary: '上传失败', detail: '缺少nginx日志配置', life: 10000 });
       } else {
-        toast.add({ severity: 'error', summary: '上传失败', detail: '文件上传失败，请重试', life: 3000 });
+        toast.add({ severity: 'error', summary: '上传失败', detail: '文件上传失败，请重试', life: 10000 });
       }
       // 失败的Toast通知
     }

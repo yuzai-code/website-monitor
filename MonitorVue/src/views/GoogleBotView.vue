@@ -21,6 +21,7 @@
                             </span>
                         </template>
                     </Column>
+                    <Column field="url_count" header="url请求次数"></Column>
 
                     <OverlayPanel ref="op">
                         <p>GoogleBot的IP地址和数量</p>
@@ -36,6 +37,7 @@
                                 </template>
                             </Column>
                             <Column field="count" header="数量"></Column>
+                            <Column field="country" header="国家"></Column>
                         </DataTable>
                     </OverlayPanel>
 
@@ -71,6 +73,7 @@ const filteredData = computed(() => {
   return googlebotDetail.value.map(item => ({
     visit_date: item.visit_date,
     google_bot: item.google_bot,
+    url_count: item.url_count,
     domain: item.domain,
   }));
 });
@@ -105,6 +108,7 @@ const fetchData = async () => {
     try {
         const response = await axiosInstance.get(`/api/website_detail/googlebot/${domain}/`);
         googlebotDetail.value = response.data;
+        // console.log(googlebotDetail.value)
     } catch (error) {
         console.error('Request failed:', error);
     }

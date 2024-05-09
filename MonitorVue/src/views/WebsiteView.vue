@@ -96,6 +96,7 @@ const submit = async () => {
       loading.value = false;
     }, 2000);
     // console.log('Updated afterKey:', afterKey.value);
+    // console.log('Updated customers:', customers.value);
     // 将后端获取的 afterKey 存储到 store 中
     filterStore.setWebsiteList(response.data, afterKey.value);
   } catch (error) {

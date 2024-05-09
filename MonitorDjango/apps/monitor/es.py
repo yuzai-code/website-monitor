@@ -353,7 +353,8 @@ class WebsiteES(ElasticsearchQueryHelper):
             .metric('ips', 'cardinality', field='remote_addr') \
             .metric('googlebot_count', 'filter', filter=Q("wildcard", user_agent="*googlebot*")) \
             .metric('google_referer', 'filter', filter=Q("wildcard", http_referer="*google.com*")) \
-            .metric('data_transfers', 'sum', field='data_transfer')
+            .metric('data_transfers', 'sum', field='data_transfer') \
+            .metric('url_count', 'cardinality', field='path') \
 
         response = search.execute()
 
@@ -363,6 +364,8 @@ class WebsiteES(ElasticsearchQueryHelper):
             # print('google_referer', bucket.google_referer.to_dict())
             domain = bucket.key.domain
             ips = bucket.ips.value
+            url_count = bucket.url_count.value
+            print('url_count', url_count)
             data_transfers = bucket.data_transfers.value
             googlebot_count = bucket.googlebot_count.doc_count if 'doc_count' in bucket.googlebot_count else 0
             google_referer = bucket.google_referer.doc_count if 'doc_count' in bucket.google_referer else 0
@@ -373,6 +376,7 @@ class WebsiteES(ElasticsearchQueryHelper):
                 'visits': bucket.doc_count,
                 'googlebot_count': googlebot_count,
                 'google_referer': google_referer,
+                'url_count': url_count,
             })
 
         after_key = getattr(aggs, 'after_key', None)

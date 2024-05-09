@@ -14,6 +14,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from utils.lookup_ip import lookup_ip
 from .es import IpAggregation, SpiderAggregation, TotalAggregation, WebsiteES
 from .models import VisitModel, WebsiteModel, LogFileModel, UserSettingsModel, TotalModel, TotalDayModel
 from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer, TotalSerializer, TotalDaySerializer
@@ -165,9 +166,10 @@ class WebsiteListAPIView(APIView):
                                                            visit_date=date_only_str)
         else:
             # 从数据库中获取数据
-            total_day_query = TotalDayModel.objects.filter(user=request.user, visit_date=date_only_str)
+            total_day_query = TotalDayModel.objects.filter(user=request.user, visit_date=date_only_str,
+                                                           url_count__isnull=False)
         if not total_day_query:  # 如果数据库中没有当天的数据，就调用celery任务进行计算
-            total_day(request.user.id, date=date_only_str)
+            total_day.delay(request.user.id, date=date_only_str)
 
         # 调用序列化器
         total_day_serializer = TotalDaySerializer(total_day_query, many=True)
@@ -271,7 +273,10 @@ class WebsiteDetailGoogleBotAPIView(APIView):
             # 根据domain查询最近一个月的GoogleBot数据
             ip_agg = IpAggregation(index='visit_new', domain=domain, user_id=request.user.id)
             googlebot_ip_data = ip_agg.get_ip_googlebot(visit_date=visit_date)
-            data = [{'ip': bucket.key, 'count': bucket.doc_count} for bucket in googlebot_ip_data]
+            for bucket in googlebot_ip_data:
+                bucket['country'] = lookup_ip(bucket.key, '/home/yuzai/Project/website-monitor-dev/MonitorDjango/utils/GeoLite2-Country.mmdb')
+
+            data = [{'ip': bucket.key, 'count': bucket.doc_count, 'country':bucket.country} for bucket in googlebot_ip_data]
             return Response(data, status=status.HTTP_200_OK)
 
         # 根据domain查询最近一个月的GoogleBot数据

@@ -50,6 +50,7 @@ def total_day(user_id, date=None):
                                                              'google_bot': website['googlebot_count'],
                                                              'visits': website['visits'],
                                                              'data_transfers': website['data_transfers'],
+                                                             'url_count': website['url_count']
                                                              })
         while after_key:
             website_list, after_key = website_es.get_website_list(date=date, after_key=after_key)
@@ -63,6 +64,7 @@ def total_day(user_id, date=None):
                                                                  'google_bot': website['googlebot_count'],
                                                                  'visits': website['visits'],
                                                                  'data_transfers': website['data_transfers'],
+                                                                 'url_count': website['url_count']
                                                                  })
     except Exception as e:
         logging.error(f'每日统计失败: {e}')

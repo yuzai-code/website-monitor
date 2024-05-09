@@ -17,6 +17,7 @@ class TotalDayModel(BaseModel):
     google_bot = models.IntegerField(verbose_name='GoogleBot访问量', default=0)
     visits = models.IntegerField(verbose_name="统计访问量", default=0)
     data_transfers = models.BigIntegerField(verbose_name='数据传输总量', blank=True, null=True)
+    url_count = models.IntegerField(verbose_name='唯一的url总数', blank=True, null=True)
     visit_date = models.DateField(default=None, verbose_name='日期', db_index=True)
 
     class Meta:
