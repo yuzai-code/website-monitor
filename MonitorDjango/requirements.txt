@@ -24,6 +24,7 @@ django-cors-headers==4.1.0
 django-rest-framework==0.1.0
 django-simpleui==2023.12.12
 djangorestframework==3.15.1
+dnspython==2.3.0
 elasticsearch==7.17.9
 elasticsearch-dsl==7.4.1
 flower==2.0.1
