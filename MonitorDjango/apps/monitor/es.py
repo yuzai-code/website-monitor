@@ -252,6 +252,41 @@ class IpAggregation(ElasticsearchQueryHelper):
 
         return search_query
 
+    def get_ip_day(self, date, after_key=None):
+        """
+        使用 Composite aggregation 分页获取指定日期的每个域名下的唯一IP数及每个IP的数量
+        """
+        search_query = self._base_search()
+        search_query = search_query.filter('term', visit_time=date)
+
+        sources = [
+            {"domain": {"terms": {"field": "domain.keyword"}}},
+            {"remote_addr": {"terms": {"field": "remote_addr"}}}
+        ]
+
+        composite_agg = A('composite', sources=sources, size=2000)
+        if after_key is not None:  # 只有在 after_key 存在时设置 after 参数
+            composite_agg = A('composite', sources=sources, size=2000, after=after_key)
+
+        search_query.aggs.bucket('composite_domain_ip', composite_agg)
+
+        response = search_query.execute()
+        # print('response', response)
+        # 解析聚合结果
+        data = []
+        for bucket in response.aggregations.composite_domain_ip.buckets:
+            domain = bucket.key.domain
+            remote_addr = bucket.key.remote_addr
+            count = bucket.doc_count
+            data.append({
+                "domain": domain,
+                "remote_addr": remote_addr,
+                "count": count
+            })
+        after_key = getattr(response.aggregations.composite_domain_ip, 'after_key', None)
+        print('data', after_key)
+        return data, after_key
+
     def get_ip_googlebot(self, visit_date, size=100):
         """
         获取Googlebot访问次数最多的前N个

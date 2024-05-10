@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, date
 import geoip2.database
+from celery import chain
 from django.db import transaction
 from django.db.models import Count, Q, Avg, Sum, F
 from django.db.models.functions import TruncDay
@@ -7,6 +8,7 @@ from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import render
 from django.utils.dateparse import parse_date
+from django.utils.timezone import make_aware
 from pygrok import pygrok
 from rest_framework import status
 from rest_framework.generics import RetrieveAPIView
@@ -14,11 +16,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from utils.lookup_ip import lookup_ip
+from utils.dns_parse import lookup_ip
 from .es import IpAggregation, SpiderAggregation, TotalAggregation, WebsiteES
-from .models import VisitModel, WebsiteModel, LogFileModel, UserSettingsModel, TotalModel, TotalDayModel
+from .models import VisitModel, WebsiteModel, LogFileModel, UserSettingsModel, TotalModel, TotalDayModel, IPDayModel
 from .serializer.monitor_serializer import MonitorSerializer, VisitSerializer, TotalSerializer, TotalDaySerializer
-from .tasks import handle_uploaded_file_task, total_day
+from .tasks import handle_uploaded_file_task, total_day, ip_day, nslookup
 from django.http import JsonResponse
 from celery.result import AsyncResult
 
@@ -270,13 +272,15 @@ class WebsiteDetailGoogleBotAPIView(APIView):
         if not domain:
             return Response({'error': 'Domain not found'}, status=status.HTTP_404_NOT_FOUND)
         if googlebot:
-            # 根据domain查询最近一个月的GoogleBot数据
+            # 根据domain查询某天的GoogleBot数据
             ip_agg = IpAggregation(index='visit_new', domain=domain, user_id=request.user.id)
             googlebot_ip_data = ip_agg.get_ip_googlebot(visit_date=visit_date)
             for bucket in googlebot_ip_data:
-                bucket['country'] = lookup_ip(bucket.key, '/home/yuzai/Project/website-monitor-dev/MonitorDjango/utils/GeoLite2-Country.mmdb')
+                bucket['country'] = lookup_ip(bucket.key,
+                                              '/home/yuzai/Project/website-monitor-dev/MonitorDjango/utils/GeoLite2-Country.mmdb')
 
-            data = [{'ip': bucket.key, 'count': bucket.doc_count, 'country':bucket.country} for bucket in googlebot_ip_data]
+            data = [{'ip': bucket.key, 'count': bucket.doc_count, 'country': bucket.country} for bucket in
+                    googlebot_ip_data]
             return Response(data, status=status.HTTP_200_OK)
 
         # 根据domain查询最近一个月的GoogleBot数据
@@ -346,47 +350,63 @@ class IpListAPIView(APIView):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.db_path = '/home/yuzai/Project/website-monitor-dev/MonitorDjango/utils/GeoLite2-Country.mmdb'
 
     def to_serializer(self, ip_aggregation):
         return [{'ip': bucket.key, 'count': bucket.doc_count} for bucket in ip_aggregation]
 
-    def lookup_ip(self, ip_address):
-        """
-        查询IP地址
-        """
-        if not hasattr(self, 'ip_cache'):
-            self.ip_cache = {}
-        if ip_address not in self.ip_cache:
-            with geoip2.database.Reader(self.db_path) as reader:
-                try:
-                    response = reader.country(ip_address)
-                    country = response.country.name
-                    self.ip_cache[ip_address] = country
-                except geoip2.errors.AddressNotFoundError:
-                    self.ip_cache[ip_address] = '未知'
-        return self.ip_cache[ip_address]
-
     def get_ip_data(self, aggregation, date_str=None, time_window=None):
         ips_aggregation = self.to_serializer(aggregation)
         for ip_data in ips_aggregation:
-            ip_data['country'] = self.lookup_ip(ip_data['ip'])
+            ip_data['country'] = lookup_ip(ip_data['ip'])
         return ips_aggregation
+
+    def parse_date(self, date_str):
+        """尝试解析日期字符串，返回日期对象或错误响应。"""
+        try:
+            return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S.%fZ').date()
+        except ValueError:
+            return Response({'error': 'Invalid date format, please use YYYY-MM-DDTHH:MM:SS.sssZ'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request, *args, **kwargs):
         domain = request.GET.get('domain', '')
         user_id = request.user.id
         date_str = request.query_params.get('date', '')
-        day = date_str.split('T')[0]
+        day = self.parse_date(date_str)
+
+        if isinstance(day, Response):
+            return day  # 早退，如果日期解析失败
+
+        ip_queryset = IPDayModel.objects.filter(user=request.user, visit_date=day)
+
+        # 如果数据库中没有当天的数据，就调用celery任务进行计算
+        if not ip_queryset.exists():
+            # 使用任务链
+            # result = chain(ip_day.s(user_id, date=day.strftime("%Y-%m-%d")),
+            #                nslookup.si(user_id, date=day.strftime("%Y-%m-%d"))).apply_async()
+            result = ip_day.delay(user_id, date=day.strftime("%Y-%m-%d"))
+            print(result)
+            return Response({'message': '数据处理中，请稍后刷新页面'},
+                            status=status.HTTP_202_ACCEPTED)
+
+        date_week = day - timedelta(days=7)
+        queryset_week = IPDayModel.objects.filter(user=request.user, visit_date__gte=date_week,
+                                                  visit_date__lte=day).values('ip').annotate(
+            count=Sum('count')).order_by('-count')
+        queryset_day = IPDayModel.objects.filter(user=request.user, visit_date=day).order_by('-count')
 
         ip_aggre = IpAggregation(index='visit_new', domain=domain, user_id=user_id) if domain else IpAggregation(
             index='visit_new', user_id=user_id)
 
         data = {
-            'ips_all': self.get_ip_data(ip_aggre.get_ip_aggregation()),
-            'ips_day': self.get_ip_data(ip_aggre.get_ip_aggregation_by_date(date=day)),
-            'ips_hour': self.get_ip_data(ip_aggre.get_ip_aggregation_time_window(date_str, 'hour', 1)),
-            'ips_min': self.get_ip_data(ip_aggre.get_ip_aggregation_time_window(date_str, 'minute', 5)),
+            'ips_week_googlebot': list(queryset_week.filter(status=1).values('ip', 'count', 'country')[:100]),
+            'ips_week_not_googlebot': list(queryset_week.exclude(status=1).values('ip', 'count', 'country')[:100]),
+            'ips_day_googlebot': list(queryset_day.filter(status=1).values('ip', 'count', 'country')[:100]),
+            'ips_day_not_googlebot': list(queryset_day.exclude(status=1).values('ip', 'count', 'country')[:100]),
+            # 'ips_all': self.get_ip_data(ip_aggre.get_ip_aggregation()),
+            # 'ips_day': self.get_ip_data(ip_aggre.get_ip_aggregation_by_date(date=day)),
+            # 'ips_hour': self.get_ip_data(ip_aggre.get_ip_aggregation_time_window(date_str, 'hour', 1)),
+            # 'ips_min': self.get_ip_data(ip_aggre.get_ip_aggregation_time_window(date_str, 'minute', 5)),
         }
 
         return Response(data, status=status.HTTP_200_OK)

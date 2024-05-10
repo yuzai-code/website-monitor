@@ -13,13 +13,18 @@
       </Card>
     </div>
 
-    <div class="card flex">
-      <p class="m-0">
-        <Card>
-          <template #title>历史总IP数前100</template>
+    <div class="leaderboard flex">
+
+      <div>
+            <h3 class="m-0">
+              GoogleBot的IP 排行
+            </h3>
+        <div class="card flex">
+          <Card>
+          <template #title>一周内总IP数前100</template>
           <template #content>
             <p class="m-0">
-              <DataTable :value="ips_data.ips_all">
+              <DataTable :value="ips_data.ips_week_googlebot">
                 <Column field="ip" header="IP">
                   <template #body="{ data }">
                     <router-link :to="{ name: 'WebsiteDetail', params: { ip: data.ip } }">
@@ -33,15 +38,99 @@
 
             </p>
           </template>
-        </Card>
-      </p>
+          </Card>
+          <Card>
+            <template #title>1天内IP数前100</template>
+            <template #content>
+              <p class="m-0">
+                <DataTable :value="ips_data.ips_day_googlebot">
+                  <Column field="ip" header="IP">
+                    <template #body="{ data }">
+                      <router-link :to="{ name: 'WebsiteDetail', params: { ip: data.ip } }">
+                        {{ data.ip }}
+                      </router-link>
+                    </template>
+                  </Column>
+                  <Column field="count" header="数量"></Column>
+                  <Column field="country" header="国家"></Column>
+                </DataTable>
 
+              </p>
+            </template>
+          </Card>
 
+          <Card>
+            <template #title>近1小时内IP数量前100</template>
+            <template #content>
+              <p class="m-0">
+                <DataTable :value="ips_data.ips_hour">
+                  <Column field="ip" header="IP">
+                    <template #body="{ data }">
+                      <router-link :to="{ name: 'WebsiteDetail', params: { ip: data.ip } }">
+                        {{ data.ip }}
+                      </router-link>
+                    </template>
+                  </Column>
+                  <Column field="count" header="数量"></Column>
+                  <Column field="country" header="国家"></Column>
+                </DataTable>
+              </p>
+            </template>
+          </Card>
+
+          <Card>
+            <template #title>近5分钟内IP数前100</template>
+            <template #content>
+              <p class="m-0">
+                <DataTable :value="ips_data.ips_min">
+                  <Column field="ip" header="IP">
+                    <template #body="{ data }">
+                      <router-link :to="{ name: 'WebsiteDetail', params: { ip: data.ip } }">
+                        {{ data.ip }}
+                      </router-link>
+                    </template>
+                  </Column>
+                  <Column field="count" header="数量"></Column>
+                  <Column field="country" header="国家"></Column>
+                </DataTable>
+
+              </p>
+            </template>
+          </Card>
+        </div>
+
+      </div>
+
+      <div>
+            <h3 class="m-0">
+              其他IP 排行
+            </h3>
+        <div class="card flex">
+
+          <Card>
+          <template #title>一周内总IP数前100</template>
+          <template #content>
+            <p class="m-0">
+              <DataTable :value="ips_data.ips_week_not_googlebot">
+                <Column field="ip" header="IP">
+                  <template #body="{ data }">
+                    <router-link :to="{ name: 'WebsiteDetail', params: { ip: data.ip } }">
+                      {{ data.ip }}
+                    </router-link>
+                  </template>
+                </Column>
+                <Column field="count" header="数量"></Column>
+                <Column field="country" header="国家"></Column>
+              </DataTable>
+
+            </p>
+          </template>
+      </Card>
       <Card>
         <template #title>1天内IP数前100</template>
         <template #content>
           <p class="m-0">
-            <DataTable :value="ips_data.ips_day">
+            <DataTable :value="ips_data.ips_day_not_googlebot">
               <Column field="ip" header="IP">
                 <template #body="{ data }">
                   <router-link :to="{ name: 'WebsiteDetail', params: { ip: data.ip } }">
@@ -95,8 +184,13 @@
           </p>
         </template>
       </Card>
+        </div>
+
+      </div>
     </div>
+    
   </div>
+  
 </template>
 
 <script setup lang="ts">
@@ -107,11 +201,16 @@ import Calendar from 'primevue/calendar';
 import Card from 'primevue/card';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
+import { useToast } from 'primevue/usetoast';
 import { onMounted, ref } from 'vue';
 
 
 const ips_data = ref({
   ips_all: [],
+  ips_week_googlebot: [],
+  ips_week_not_googlebot: [],
+  ips_day_googlebot: [],
+  ips_day_not_googlebot: [],
   ips_min: [],
   ips_hour: [],
   ips_day: [],
@@ -120,6 +219,7 @@ const ips_data = ref({
 const date = ref(new Date());
 const loading = ref(false);
 const filterStore = useFilterStore(); // 使用筛选条件store
+const toast = useToast();
 
 const updateSelectedDate = (newDate) => {
   // console.log('类型1', typeof newDate);
@@ -142,6 +242,15 @@ const fetchData = async () => {
     console.log('Response:', response.data);
     // 将ips_data存储到store中
     filterStore.setIpsData(response.data);
+    if (response.status === 202){
+      toast.add({
+        severity: 'info',
+        summary: '数据处理中',
+        detail: '数据处理中，请稍后刷新页面',
+        life: 10000
+      });
+    }
+    
   } catch (error) {
     console.error('Request failed:', error);
   } finally {
@@ -165,8 +274,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.m-0 {
+  display: flex;          /* 启用 flexbox 布局 */
+  justify-content: center; /* 水平居中 */
+  padding: 1rem;
+}
 .card {
-  display: flex;
   gap: 1rem;
   top: 1rem;
   margin-top: 1rem;

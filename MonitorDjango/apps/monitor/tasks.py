@@ -7,11 +7,13 @@ import sys
 from django.contrib.auth.models import User
 from django.core.wsgi import get_wsgi_application
 from django.db import transaction
+from django.db.models import Count
 from elasticsearch.helpers import bulk
 from elasticsearch_dsl import connections, Search, Index
 from rest_framework.response import Response
 
-from monitor.es import TotalAggregation, WebsiteES
+from monitor.es import TotalAggregation, WebsiteES, IpAggregation
+from utils.dns_parse import is_googlebot, lookup_ip
 
 sys.path.extend(['/home/yuzai/Desktop/WebsiteMonitor'])
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "WebsiteMonitor.settings")
@@ -19,8 +21,8 @@ application = get_wsgi_application()
 import logging
 import re
 
-from celery import shared_task, chord
-from monitor.models import WebsiteModel, VisitModel, LogFileModel, TotalModel, TotalDayModel
+from celery import shared_task, chord, group
+from monitor.models import WebsiteModel, VisitModel, LogFileModel, TotalModel, TotalDayModel, IPDayModel
 import pygrok
 from datetime import datetime, timedelta
 from WebsiteMonitor.settings import config
@@ -28,6 +30,146 @@ from WebsiteMonitor.settings import config
 # 建立Elasticsearch连接
 # connections.create_connection(hosts=['localhost:9200'], timeout=20)
 elasticsearch_client = connections.create_connection(hosts=[config['es']['ES_URL']], timeout=20)
+
+
+@shared_task(name='is_googlebot', queue='handle_ip')
+def nslookup(user_id, date=None):
+    """
+    查询IP是否是googlebot，并批量更新状态
+    """
+    if date is None:
+        date = datetime.now().date().isoformat()
+
+    logging.info('开始执行nslookup')
+    ip_list = list(IPDayModel.objects.filter(user_id=user_id, visit_date=date).values_list('ip', flat=True))
+    batch_size = 100  # 根据需求调整批量大小
+    ip_batches = [ip_list[i:i + batch_size] for i in range(0, len(ip_list), batch_size)]
+
+    for ip_batch in ip_batches:
+        nslookup_batch.delay(user_id, date, ip_batch)
+
+
+from django.db.models import F
+
+
+@shared_task(name='nslookup_batch', queue='handle_ip')
+def nslookup_batch(user_id, date, ip_batch):
+    """
+    处理一批IP的查询和更新
+    """
+    logging.info('开始执行nslookup子任务')
+    # 从数据库获取所有相关IP的记录
+    ip_records = IPDayModel.objects.filter(user_id=user_id, visit_date=date, ip__in=ip_batch)
+
+    # 创建一个字典，以便通过IP快速访问每个记录
+    ip_record_map = {rec.ip: rec for rec in ip_records}
+
+    # 检查每个IP是否是googlebot，并设置状态
+    for ip in ip_batch:
+        if ip in ip_record_map:
+            record = ip_record_map[ip]
+            is_bot = is_googlebot(ip)
+            record.status = 1 if is_bot else 0  # 设置状态为1如果是googlebot，否则为0
+
+    # 使用bulk_update批量更新记录，只更新'status'字段
+    if ip_record_map:
+        IPDayModel.objects.bulk_update(ip_record_map.values(), ['status'])
+
+    logging.info(f'批量更新成功，处理了 {len(ip_record_map)} 个IP')
+
+
+@shared_task(name='ip_day', queue='handle_ip')
+def ip_day(user_id, date=None):
+    if date is None:
+        date = datetime.now().date().isoformat()
+
+    # 初始化一个 IpAggregation 实例来处理IP聚合
+    ip_aggr = IpAggregation(index='visit_new', user_id=user_id)
+    # 获取当天IP数据以及分页查询的游标
+    data, after_key = ip_aggr.get_ip_day(date=date)
+
+    # 设置批处理大小
+    batch_size = 3000  # 或根据实际情况进行调整
+    ip_data_batches = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
+
+    all_tasks = [process_ip_data_batch.s(user_id, date, batch) for batch in ip_data_batches]
+
+    # 如果存在分页数据，继续获取并添加批量任务
+    while after_key:
+        data, after_key = ip_aggr.get_ip_day(date=date, after_key=after_key)
+        more_batches = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
+        all_tasks.extend(process_ip_data_batch.s(user_id, date, batch) for batch in more_batches)
+
+    # 创建任务组
+    task_group = group(all_tasks) if all_tasks else None
+    if task_group is None:
+        logging.error("No tasks have been scheduled. Check the data retrieval step.")
+        return
+
+    # 定义回调任务并执行
+    callback_task = nslookup.si(user_id, date)
+    result = chord(task_group)(callback_task)
+    return result
+
+
+@shared_task(name='process_ip_data_batch', queue='handle_ip')
+def process_ip_data_batch(user_id, date, ip_data_list):
+    logging.info('开始执行批量IP数据处理任务')
+
+    # 查询数据库中已存在的IP记录
+    existing_ips = IPDayModel.objects.filter(
+        user_id=user_id,
+        visit_date=date,
+        ip__in=[item['remote_addr'] for item in ip_data_list]
+    ).annotate(
+        total_count=Count('ip')
+    ).values_list('ip', flat=True)
+
+    existing_ip_set = set(existing_ips)
+
+    # 准备批量创建和更新的数据列表
+    to_create = []
+    to_update = []
+
+    for item in ip_data_list:
+        country = lookup_ip(item['remote_addr'])
+        if item['remote_addr'] in existing_ip_set:
+            # 准备更新数据
+            to_update.append(IPDayModel(
+                user_id=user_id,
+                domain=item['domain'],
+                visit_date=date,
+                ip=item['remote_addr'],
+                count=item['count'],
+                status=0,  # 或其他逻辑定义的状态
+                country=country
+            ))
+        else:
+            # 准备新建数据
+            to_create.append(IPDayModel(
+                user_id=user_id,
+                domain=item['domain'],
+                visit_date=date,
+                ip=item['remote_addr'],
+                count=item['count'],
+                status=0,
+                country=country
+            ))
+
+    # 批量创建新记录
+    IPDayModel.objects.bulk_create(to_create)
+    logging.info(f'成功创建{len(to_create)}条IP数据')
+
+    # 批量更新现有记录
+    # 注意: Django 默认不支持bulk_update，需要手动实现或使用update()循环每个对象
+    for update_item in to_update:
+        IPDayModel.objects.filter(user_id=user_id, visit_date=date, ip=update_item.ip).update(
+            count=update_item.count,
+            country=update_item.country
+        )
+    logging.info(f'成功更新{len(to_update)}条IP数据')
+
+    return f"Processed {len(to_create) + len(to_update)} IP addresses"
 
 
 @shared_task(name='total_day', queue='handle_file')
@@ -66,6 +208,7 @@ def total_day(user_id, date=None):
                                                                  'data_transfers': website['data_transfers'],
                                                                  'url_count': website['url_count']
                                                                  })
+            print('保存成功')
     except Exception as e:
         logging.error(f'每日统计失败: {e}')
         return e
@@ -134,7 +277,8 @@ def handle_uploaded_file_task(nginx_format, file_path, user_id, domain):
             tasks.append(process_log_batch.s(batch_lines, domain, pattern_string, user_id))
 
     # 使用chord来确保所有process_log_batch任务完成后调用total任务
-    callback = total.s(user_id=user_id) | total_day.si(user_id=user_id)
+    callback = total.s(user_id=user_id) | total_day.si(user_id=user_id) | ip_day.si(user_id=user_id) | nslookup.si(
+        user_id=user_id)
     result = chord(tasks)(callback)
 
 

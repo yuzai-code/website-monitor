@@ -4,7 +4,16 @@ import { defineStore } from 'pinia'
 export const useFilterStore = defineStore('filter', {
   state: () => ({
     selectedDate: new Date(),
-    ipsData: { ips_all: [], ips_min: [], ips_hour: [], ips_day: [] },
+    ipsData: {
+      ips_all: [],
+      ips_min: [],
+      ips_hour: [],
+      ips_day: [],
+      ips_week_googlebot: [],
+      ips_week_not_googlebot: [],
+      ips_day_googlebot: [],
+      ips_day_not_googlebot: []
+    },
     websiteDate: new Date(),
     websiteList: [],
     afterKey: '',

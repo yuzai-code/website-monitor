@@ -5,6 +5,29 @@ from django.urls import reverse
 from utils.basemodel import BaseModel
 
 
+class IPDayModel(BaseModel):
+    """
+    每日IP统计
+    """
+    STATUS = (
+        (0, '其他'),
+        (1, 'googlebot'),
+        (2, '异常'),
+    )
+    domain = models.CharField(max_length=100, verbose_name='域名', blank=True, null=True, db_index=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, verbose_name='用户', null=True, blank=True)
+    ip = models.CharField(max_length=100, verbose_name='IP', blank=True, null=True, db_index=True)
+    country = models.CharField(max_length=100, verbose_name='国家', blank=True, null=True)
+    count = models.IntegerField(verbose_name='IP数量', default=0)
+    status = models.IntegerField(choices=STATUS, default=0, verbose_name='状态')
+    visit_date = models.DateField(default=None, verbose_name='日期', db_index=True)
+
+    class Meta:
+        db_table = 't_ip_day'
+        verbose_name = '每日IP统计'
+        verbose_name_plural = verbose_name
+
+
 # Create your models here.
 class TotalDayModel(BaseModel):
     """
