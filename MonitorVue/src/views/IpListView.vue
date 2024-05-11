@@ -1,14 +1,14 @@
 <template>
   <div class="container">
     <div class="calendar-container">
-      <Card class="centered-title">
+      <Card class="centered-title flex">
         <template #title>IP统计</template>
         <template #content>
           日期:
-          <Calendar id="calendar-24h" v-model="date" @update:modelValue="updateSelectedDate" dateFormat="yy-mm-dd"
+          <Calendar class="calendar" id="calendar-24h" v-model="date" @update:modelValue="updateSelectedDate" dateFormat="yy-mm-dd"
             showTime hourFormat="24" />
-          <Button type="button" label="查询" icon="pi pi-search" :loading="loading" @click="fetchData" />
-
+          <Button class="button" type="button" label="查询" icon="pi pi-search" :loading="loading" @click="fetchData" />
+          <Button class="button" type="button" label="检测" icon="pi pi-search" severity="info" raised @click="updateCheck"/>
         </template>
       </Card>
     </div>
@@ -220,6 +220,12 @@ const date = ref(new Date());
 const loading = ref(false);
 const filterStore = useFilterStore(); // 使用筛选条件store
 const toast = useToast();
+const check = ref(false);
+
+const updateCheck = () => {
+  check.value = !check.value;
+  fetchData();
+}
 
 const updateSelectedDate = (newDate) => {
   // console.log('类型1', typeof newDate);
@@ -234,7 +240,8 @@ const fetchData = async () => {
   try {
     const response = await axiosInstance.get(`api/ip_list/`, {
       params: {
-        date: utcDate  // 使用UTC格式的日期
+        date: utcDate,  // 使用UTC格式的日期
+        check: check.value
       }
     });
 
@@ -250,7 +257,7 @@ const fetchData = async () => {
         life: 10000
       });
     }
-    
+    check.value = false;
   } catch (error) {
     console.error('Request failed:', error);
   } finally {
@@ -274,6 +281,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.calendar {
+  margin-right: 10px;
+}
+.button {
+  margin-right: 10px;
+}
+
 .m-0 {
   display: flex;          /* 启用 flexbox 布局 */
   justify-content: center; /* 水平居中 */

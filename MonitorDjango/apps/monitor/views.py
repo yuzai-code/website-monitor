@@ -372,10 +372,19 @@ class IpListAPIView(APIView):
         domain = request.GET.get('domain', '')
         user_id = request.user.id
         date_str = request.query_params.get('date', '')
+        check = request.query_params.get('check', '')
         day = self.parse_date(date_str)
 
         if isinstance(day, Response):
             return day  # 早退，如果日期解析失败
+
+        print('check', check)
+        if check == 'true':
+            result = ip_day.delay(user_id, date=day.strftime("%Y-%m-%d"))
+            # print(result)
+            print('检测数据中...')
+            return Response({'message': '数据处理中，请稍后刷新页面'},
+                            status=status.HTTP_202_ACCEPTED)
 
         ip_queryset = IPDayModel.objects.filter(user=request.user, visit_date=day)
 
@@ -386,6 +395,7 @@ class IpListAPIView(APIView):
             #                nslookup.si(user_id, date=day.strftime("%Y-%m-%d"))).apply_async()
             result = ip_day.delay(user_id, date=day.strftime("%Y-%m-%d"))
             print(result)
+            # print('1111')
             return Response({'message': '数据处理中，请稍后刷新页面'},
                             status=status.HTTP_202_ACCEPTED)
 
@@ -405,8 +415,8 @@ class IpListAPIView(APIView):
             'ips_day_not_googlebot': list(queryset_day.exclude(status=1).values('ip', 'count', 'country')[:100]),
             # 'ips_all': self.get_ip_data(ip_aggre.get_ip_aggregation()),
             # 'ips_day': self.get_ip_data(ip_aggre.get_ip_aggregation_by_date(date=day)),
-            # 'ips_hour': self.get_ip_data(ip_aggre.get_ip_aggregation_time_window(date_str, 'hour', 1)),
-            # 'ips_min': self.get_ip_data(ip_aggre.get_ip_aggregation_time_window(date_str, 'minute', 5)),
+            'ips_hour': self.get_ip_data(ip_aggre.get_ip_aggregation_time_window(date_str, 'hour', 1)),
+            'ips_min': self.get_ip_data(ip_aggre.get_ip_aggregation_time_window(date_str, 'minute', 5)),
         }
 
         return Response(data, status=status.HTTP_200_OK)
