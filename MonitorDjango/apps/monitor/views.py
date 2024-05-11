@@ -403,7 +403,8 @@ class IpListAPIView(APIView):
         queryset_week = IPDayModel.objects.filter(user=request.user, visit_date__gte=date_week,
                                                   visit_date__lte=day).values('ip').annotate(
             count=Sum('count')).order_by('-count')
-        queryset_day = IPDayModel.objects.filter(user=request.user, visit_date=day).order_by('-count')
+        queryset_day = IPDayModel.objects.filter(user=request.user, visit_date=day).values('ip').annotate(
+            count=Sum('count')).order_by('-count')
 
         ip_aggre = IpAggregation(index='visit_new', domain=domain, user_id=user_id) if domain else IpAggregation(
             index='visit_new', user_id=user_id)
