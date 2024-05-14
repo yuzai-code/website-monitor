@@ -458,7 +458,7 @@ class TotalAPIView(APIView):
         # 获取过去两周的时间
         two_weeks_ago = today - timedelta(days=14)
         # 获取过去两周的数据
-        total = TotalModel.objects.filter(user=user, visit_date__range=(two_weeks_ago, today))
+        total = TotalModel.objects.filter(user=user, visit_date__range=(two_weeks_ago, today)).order_by('visit_date')
         data = TotalSerializer(total, many=True).data
         # total_agg = TotalAggregation(index='visit_new', user_id=user.id)
         # es_total_visit = total_agg.total_visit()
